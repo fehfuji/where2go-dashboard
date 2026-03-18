@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Where2Go · Dashboard de Vendas</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.10.3/umd/Recharts.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .animate-spin { animation: spin 1s linear infinite; display:inline-block; }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+const {
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} = Recharts;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONFIGURAÇÃO — ID da planilha Google Sheets
+// ═══════════════════════════════════════════════════════════════════════════════
+const SHEET_ID  = "1cvgS6CEVhc-KhPtzLidWqg4h7KDA2NqyrOERbC3_XPE";
+const SHEET_TAB = "orders";
+
+const sheetUrl = () =>
+  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${SHEET_TAB}`;
+
+// ─── FALLBACK DATA ────────────────────────────────────────────────────────────
+const FALLBACK = {
+  daily: [
+    { date:"05/02",receita:300,pedidos:1},{date:"06/02",receita:100,pedidos:1},
+    {date:"07/02",receita:500,pedidos:1},{date:"08/02",receita:900,pedidos:2},
+    {date:"09/02",receita:100,pedidos:1},{date:"10/02",receita:300,pedidos:1},
+    {date:"11/02",receita:300,pedidos:1},{date:"13/02",receita:700,pedidos:2},
+    {date:"14/02",receita:400,pedidos:1},{date:"16/02",receita:400,pedidos:1},
+    {date:"17/02",receita:400,pedidos:1},{date:"23/02",receita:1400,pedidos:3},
+    {date:"24/02",receita:400,pedidos:1},{date:"25/02",receita:120,pedidos:1},
+    {date:"02/03",receita:520,pedidos:2},{date:"03/03",receita:560,pedidos:2},
+    {date:"04/03",receita:545,pedidos:2},{date:"06/03",receita:400,pedidos:1},
+    {date:"07/03",receita:200,pedidos:2},{date:"08/03",receita:800,pedidos:3},
+    {date:"10/03",receita:200,pedidos:2},{date:"11/03",receita:940,pedidos:2},
+    {date:"12/03",receita:1900,pedidos:4},{date:"13/03",receita:1020,pedidos:5},
+    {date:"14/03",receita:300,pedidos:1},{date:"15/03",receita:100,pedidos:1},
+  ],
+  weekly: [
+    {semana:"S1 Fev",receita:900},{semana:"S2 Fev",receita:2700},
+    {semana:"S3 Fev",receita:800},{semana:"S4 Fev",receita:1920},
+    {semana:"S1 Mar",receita:2225},{semana:"S2 Mar",receita:5160},
+    {semana:"S3 Mar",receita:100},
+  ],
+  parceiros: [
+    {nome:"Up Frei Caneca",receita:11580,pedidos:38,share:84},
+    {nome:"Shoshanna Bar",receita:1600,pedidos:3,share:11.6},
+    {nome:"O Mineiro SP",receita:240,pedidos:1,share:1.7},
+    {nome:"Clube do Acarajé",receita:145,pedidos:1,share:1.1},
+    {nome:"ZIV Gallery",receita:120,pedidos:1,share:0.9},
+    {nome:"Savana",receita:120,pedidos:1,share:0.9},
+  ],
+  categorias: [
+    {name:"Aniversário",value:7600,color:"#6366f1"},
+    {name:"Bares",value:5600,color:"#8b5cf6"},
+    {name:"Restaurantes",value:385,color:"#0ea5e9"},
+    {name:"Rolêzinho Econ.",value:120,color:"#10b981"},
+    {name:"Dates",value:100,color:"#f59e0b"},
+  ],
+  topProdutos: [
+    {titulo:"Aniversário no Quintal do UP!",receita:4000,pedidos:10,ticket:400},
+    {titulo:"Transmissão Oscar 2026",receita:2500,pedidos:11,ticket:227},
+    {titulo:"Comemore seu Aniversário no UP",receita:2200,pedidos:4,ticket:550},
+    {titulo:"Aniversário 30 Pessoas - Shoshanna",receita:1300,pedidos:2,ticket:650},
+    {titulo:"Reserva 2 Pessoas Oscar 2026",receita:800,pedidos:6,ticket:133},
+    {titulo:"Aniversário 15 Pessoas",receita:600,pedidos:2,ticket:300},
+    {titulo:"Reserva 10 Pessoas Oscar",receita:500,pedidos:1,ticket:500},
+    {titulo:"Reserva para 20 Pessoas",receita:400,pedidos:1,ticket:400},
+  ],
+  todosProdutos: [
+    {titulo:"ANIVERSÁRIO NO QUINTAL DO UP! MEMORÁVEL!",receita:4000,pedidos_pagos:10,pedidos_total:19,ticket:400,categoria:"Aniversário",parceiro:"Up Frei Caneca"},
+    {titulo:"TRANSMISSÃO OSCAR 2026",receita:2500,pedidos_pagos:11,pedidos_total:23,ticket:227,categoria:"Bares",parceiro:"Up Frei Caneca"},
+    {titulo:"COMEMORE SEU ANIVERSÁRIO NO UP",receita:2200,pedidos_pagos:4,pedidos_total:7,ticket:550,categoria:"Aniversário",parceiro:"Up Frei Caneca"},
+    {titulo:"ANIVERSÁRIO PARA 30 PESSOAS NO SHOSHANNA",receita:1300,pedidos_pagos:2,pedidos_total:2,ticket:650,categoria:"Aniversário",parceiro:"Shoshanna Bar"},
+    {titulo:"RESERVA 2 PESSOAS OSCAR 2026",receita:800,pedidos_pagos:6,pedidos_total:9,ticket:133,categoria:"Bares",parceiro:"Up Frei Caneca"},
+    {titulo:"ANIVERSÁRIO PARA 15 PESSOAS",receita:600,pedidos_pagos:2,pedidos_total:3,ticket:300,categoria:"Aniversário",parceiro:"Up Frei Caneca"},
+    {titulo:"RESERVA 10 PESSOAS OSCAR 2026",receita:500,pedidos_pagos:1,pedidos_total:1,ticket:500,categoria:"Bares",parceiro:"Up Frei Caneca"},
+    {titulo:"RESERVA PARA 20 PESSOAS",receita:400,pedidos_pagos:1,pedidos_total:2,ticket:400,categoria:"Aniversário",parceiro:"Up Frei Caneca"},
+    {titulo:"SALA LIMÃO SICILIANO",receita:400,pedidos_pagos:1,pedidos_total:3,ticket:400,categoria:"Aniversário",parceiro:"Up Frei Caneca"},
+    {titulo:"RESERVA TRANSMISSÃO OSCAR 2026",receita:300,pedidos_pagos:1,pedidos_total:1,ticket:300,categoria:"Bares",parceiro:"Shoshanna Bar"},
+    {titulo:"A melhor parmegiana perto da Avenida Paulista",receita:240,pedidos_pagos:1,pedidos_total:2,ticket:240,categoria:"Restaurantes",parceiro:"O Mineiro SP"},
+    {titulo:"CINEMA AO AR LIVRE",receita:180,pedidos_pagos:2,pedidos_total:2,ticket:90,categoria:"Bares",parceiro:"Up Frei Caneca"},
+    {titulo:"Combo Completo do Clube!",receita:145,pedidos_pagos:1,pedidos_total:3,ticket:145,categoria:"Restaurantes",parceiro:"Clube do Acarajé"},
+    {titulo:"Grafite um muro no Beco do Batman",receita:120,pedidos_pagos:1,pedidos_total:2,ticket:120,categoria:"Rolêzinho Econômico",parceiro:"ZIV Gallery"},
+    {titulo:"Combinação Savana – Budweiser + Croquetes",receita:120,pedidos_pagos:1,pedidos_total:2,ticket:120,categoria:"Bares",parceiro:"Savana"},
+    {titulo:"Pinte uma tela enquanto degusta vinhos",receita:0,pedidos_pagos:0,pedidos_total:7,ticket:0,categoria:"Dates",parceiro:"ZIV Gallery"},
+    {titulo:"Jornada Enogastronômica: Rodízio de Vinho",receita:0,pedidos_pagos:0,pedidos_total:2,ticket:0,categoria:"Dates",parceiro:"Manollos Carne e Vinho"},
+    {titulo:"Viagem à Grécia: Culinária com Quebra de Pratos",receita:0,pedidos_pagos:0,pedidos_total:2,ticket:0,categoria:"Restaurantes",parceiro:"Restaurante Prato Grego"},
+    {titulo:"Escape Room Loja Sinistra",receita:0,pedidos_pagos:0,pedidos_total:2,ticket:0,categoria:"Rolêzinho Econômico",parceiro:"EscapeCore"},
+    {titulo:"Coma à vontade – rodízio de petiscos",receita:0,pedidos_pagos:0,pedidos_total:1,ticket:0,categoria:"Restaurantes",parceiro:"O Mineiro SP"},
+    {titulo:"Pinte uma tela com o seu par",receita:0,pedidos_pagos:0,pedidos_total:1,ticket:0,categoria:"Dates",parceiro:"ZIV Gallery"},
+    {titulo:"Jantar Argentino - Menu Parrilla & Vinhos",receita:0,pedidos_pagos:0,pedidos_total:1,ticket:0,categoria:"Dates",parceiro:"Manollos"},
+    {titulo:"Pintura Intuitiva para Casais",receita:0,pedidos_pagos:0,pedidos_total:1,ticket:0,categoria:"Dates",parceiro:"Meu Ateliê"},
+    {titulo:"Arqueiro expert",receita:0,pedidos_pagos:0,pedidos_total:1,ticket:0,categoria:"Bares",parceiro:"Willi Willie Bar"},
+    {titulo:"ARTWine Originals",receita:0,pedidos_pagos:0,pedidos_total:1,ticket:0,categoria:"Vida Noturna",parceiro:"ZIV Gallery"},
+  ],
+  statusData:[
+    {name:"Pagos/Entregues",value:45,color:"#10b981"},
+    {name:"Expirados",value:43,color:"#f59e0b"},
+    {name:"Cancelados",value:12,color:"#ef4444"},
+  ],
+  funil:[
+    {label:"Pedidos Iniciados",valor:100,pct:100,color:"bg-indigo-500"},
+    {label:"Pagamentos Gerados",valor:100,pct:100,color:"bg-indigo-400"},
+    {label:"Pagos / Entregues",valor:45,pct:45,color:"bg-emerald-500"},
+    {label:"Expirados s/ Pagar",valor:43,pct:43,color:"bg-amber-400"},
+    {label:"Cancelados",valor:12,pct:12,color:"bg-red-400"},
+  ],
+  kpis:{totalRevenue:13804,paidCount:45,expiredCount:43,canceledCount:12,avgTicket:307,convRate:45,estimatedLoss:13201,totalOrders:100,startDate:"05 fev.",endDate:"16 mar."},
+};
+
+// ─── PARSER ────────────────────────────────────────────────────────────────────
+const PAID_STATUSES = ["pago","entregue","concluido"];
+const CAT_COLORS = ["#6366f1","#8b5cf6","#0ea5e9","#10b981","#f59e0b","#f472b6","#ef4444","#94a3b8"];
+
+function parseOrders(rows) {
+  const orders = rows
+    .map(r => ({
+      business:(r.business_name||"").trim(),
+      date:(r.created_at||"").split("T")[0],
+      price:parseFloat(r.price)||0,
+      status:(r.status||"").trim().toLowerCase(),
+      title:(r.title||"").trim(),
+      category:(r.category||"Outros").trim(),
+    }))
+    .filter(o => o.date);
+
+  if (orders.length===0) return FALLBACK;
+
+  const paid     = orders.filter(o => PAID_STATUSES.includes(o.status));
+  const expired  = orders.filter(o => o.status==="expired");
+  const canceled = orders.filter(o => ["cancelado","rejeitado"].includes(o.status));
+  const totalRevenue = paid.reduce((s,o)=>s+o.price,0);
+  const avgTicket = paid.length>0 ? Math.round(totalRevenue/paid.length) : 0;
+  const convRate  = orders.length>0 ? Math.round((paid.length/orders.length)*100) : 0;
+
+  // Daily
+  const dayMap={};
+  orders.forEach(o=>{
+    const [y,m,d]=o.date.split("-");
+    const key=`${d}/${m}`;
+    if(!dayMap[key]) dayMap[key]={date:key,receita:0,pedidos:0,_s:parseInt(m)*100+parseInt(d)};
+    if(PAID_STATUSES.includes(o.status)) dayMap[key].receita+=o.price;
+    dayMap[key].pedidos++;
+  });
+  const daily=Object.values(dayMap).sort((a,b)=>a._s-b._s).map(({_s,...r})=>({...r,receita:Math.round(r.receita)}));
+
+  // Weekly
+  const weekMap={};
+  orders.forEach(o=>{
+    const d=new Date(o.date);
+    const s=new Date(d);
+    s.setDate(d.getDate()-((d.getDay()+6)%7));
+    const wk=s.toISOString().split("T")[0];
+    if(!weekMap[wk]) weekMap[wk]={receita:0,_d:s};
+    if(PAID_STATUSES.includes(o.status)) weekMap[wk].receita+=o.price;
+  });
+  const weekly=Object.keys(weekMap).sort().map(wk=>{
+    const d=weekMap[wk]._d;
+    const mon=d.toLocaleString("pt-BR",{month:"short"}).replace(".","");
+    return {semana:`S${Math.ceil(d.getDate()/7)} ${mon.charAt(0).toUpperCase()+mon.slice(1)}`,receita:Math.round(weekMap[wk].receita)};
+  });
+
+  // Parceiros
+  const parcMap={};
+  paid.forEach(o=>{
+    if(!parcMap[o.business]) parcMap[o.business]={nome:o.business,receita:0,pedidos:0};
+    parcMap[o.business].receita+=o.price;
+    parcMap[o.business].pedidos++;
+  });
+  const parceiros=Object.values(parcMap).sort((a,b)=>b.receita-a.receita)
+    .map(p=>({...p,receita:Math.round(p.receita),share:totalRevenue>0?Math.round(p.receita/totalRevenue*1000)/10:0}));
+
+  // Categorias
+  const catMap={};
+  paid.forEach(o=>{
+    if(!catMap[o.category]) catMap[o.category]=0;
+    catMap[o.category]+=o.price;
+  });
+  const categorias=Object.entries(catMap).sort(([,a],[,b])=>b-a)
+    .map(([name,value],i)=>({name,value:Math.round(value),color:CAT_COLORS[i%CAT_COLORS.length]}));
+
+  // Produtos
+  const prodMap={};
+  orders.forEach(o=>{
+    if(!o.title) return;
+    if(!prodMap[o.title]) prodMap[o.title]={titulo:o.title,receita:0,pedidos_pagos:0,pedidos_total:0,ticket:0,categoria:o.category,parceiro:o.business};
+    prodMap[o.title].pedidos_total++;
+    if(PAID_STATUSES.includes(o.status)){prodMap[o.title].pedidos_pagos++;prodMap[o.title].receita+=o.price;}
+  });
+  const todosProdutos=Object.values(prodMap).sort((a,b)=>b.receita-a.receita)
+    .map(p=>({...p,receita:Math.round(p.receita),ticket:p.pedidos_pagos>0?Math.round(p.receita/p.pedidos_pagos):0}));
+  const topProdutos=todosProdutos.filter(p=>p.receita>0).slice(0,8)
+    .map(p=>({titulo:p.titulo,receita:p.receita,pedidos:p.pedidos_pagos,ticket:p.ticket}));
+
+  const statusData=[
+    {name:"Pagos/Entregues",value:paid.length,color:"#10b981"},
+    {name:"Expirados",value:expired.length,color:"#f59e0b"},
+    {name:"Cancelados",value:canceled.length,color:"#ef4444"},
+  ];
+  const tot=orders.length;
+  const funil=[
+    {label:"Pedidos Iniciados",valor:tot,pct:100,color:"bg-indigo-500"},
+    {label:"Pagamentos Gerados",valor:tot,pct:100,color:"bg-indigo-400"},
+    {label:"Pagos / Entregues",valor:paid.length,pct:Math.round(paid.length/tot*100),color:"bg-emerald-500"},
+    {label:"Expirados s/ Pagar",valor:expired.length,pct:Math.round(expired.length/tot*100),color:"bg-amber-400"},
+    {label:"Cancelados",valor:canceled.length,pct:Math.round(canceled.length/tot*100),color:"bg-red-400"},
+  ];
+  const dates=orders.map(o=>o.date).filter(Boolean).sort();
+  const fmtD=iso=>new Date(iso+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short"});
+
+  return {
+    daily,weekly,parceiros,categorias,topProdutos,todosProdutos,statusData,funil,
+    kpis:{totalRevenue:Math.round(totalRevenue),paidCount:paid.length,expiredCount:expired.length,canceledCount:canceled.length,avgTicket,convRate,estimatedLoss:Math.round(expired.length*avgTicket),totalOrders:orders.length,startDate:dates[0]?fmtD(dates[0]):"",endDate:dates[dates.length-1]?fmtD(dates[dates.length-1]):""},
+  };
+}
+
+// ─── HOOK ─────────────────────────────────────────────────────────────────────
+function useOrdersSheet() {
+  const [data,setData]=useState(FALLBACK);
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState(null);
+  const [lastUpdated,setLastUpdated]=useState(null);
+  const [isLive,setIsLive]=useState(false);
+
+  const refetch=useCallback(()=>{
+    if(!SHEET_ID) return;
+    setLoading(true);setError(null);
+    fetch(sheetUrl())
+      .then(r=>{if(!r.ok) throw new Error(`HTTP ${r.status}`);return r.text();})
+      .then(csv=>{
+        const parsed=Papa.parse(csv,{header:true,skipEmptyLines:true});
+        if(parsed.data.length>0){setData(parseOrders(parsed.data));setIsLive(true);setLastUpdated(new Date());}
+      })
+      .catch(e=>setError(e.message))
+      .finally(()=>setLoading(false));
+  },[]);
+
+  useEffect(()=>{refetch();},[refetch]);
+  return {data,loading,error,refetch,lastUpdated,isLive};
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+const C={indigo:"#6366f1",violet:"#8b5cf6",emerald:"#10b981",amber:"#f59e0b",sky:"#0ea5e9"};
+const fmt=v=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0}).format(v);
+
+const CustomTooltip=({active,payload,label})=>{
+  if(!active||!payload?.length) return null;
+  return (
+    <div className="bg-white border border-gray-100 rounded-xl shadow-lg px-4 py-3 text-sm">
+      <p className="text-gray-400 text-xs mb-1">{label}</p>
+      {payload.map((p,i)=>(
+        <p key={i} style={{color:p.color}} className="font-semibold">
+          {p.name==="receita"?fmt(p.value):`${p.value} pedidos`}
+        </p>
+      ))}
+    </div>
+  );
+};
+
+const KPI=({label,value,sub,delta,color="indigo",icon})=>{
+  const borders={indigo:"border-indigo-400",emerald:"border-emerald-400",amber:"border-amber-400",violet:"border-violet-400",sky:"border-sky-400",rose:"border-rose-400",red:"border-red-400"};
+  return (
+    <div className={`bg-white rounded-2xl p-4 shadow-sm border-l-4 ${borders[color]}`}>
+      <div className="flex items-start justify-between">
+        <p className="text-xs text-gray-400 uppercase tracking-wide leading-tight">{label}</p>
+        {icon&&<span className="text-lg">{icon}</span>}
+      </div>
+      <p className="text-2xl font-bold text-gray-800 mt-1">{value}</p>
+      {sub&&<p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+      {delta&&<p className={`text-xs font-semibold mt-1 ${delta.startsWith("+")||delta.endsWith("conversão")?"text-emerald-500":"text-red-400"}`}>{delta}</p>}
+    </div>
+  );
+};
+
+const Badge=({label,color})=>{
+  const map={green:"bg-emerald-100 text-emerald-700",yellow:"bg-amber-100 text-amber-700",blue:"bg-indigo-100 text-indigo-700",red:"bg-red-100 text-red-700",purple:"bg-purple-100 text-purple-700",rose:"bg-pink-100 text-pink-700",gray:"bg-gray-100 text-gray-500"};
+  return <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${map[color]||map.gray}`}>{label}</span>;
+};
+
+const SecTitle=({children})=><p className="text-sm font-semibold text-gray-700 mb-4">{children}</p>;
+
+const TABS=[
+  {id:"overview",label:"📊 Overview"},
+  {id:"receita",label:"💰 Receita"},
+  {id:"produtos",label:"🎯 Produtos"},
+  {id:"lista",label:"📋 Todos os Produtos"},
+  {id:"funil",label:"🔄 Funil & Insights"},
+];
+
+// ─── OVERVIEW ─────────────────────────────────────────────────────────────────
+function TabOverview({data}){
+  const [metric,setMetric]=useState("receita");
+  const {kpis,daily,statusData,parceiros}=data;
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KPI label="Receita Total" value={fmt(kpis.totalRevenue)} sub="Pedidos pagos + entregues" color="indigo" icon="💰"/>
+        <KPI label="Pedidos Pagos" value={kpis.paidCount} sub={`de ${kpis.totalOrders} iniciados`} color="emerald" icon="🛒" delta={`+${kpis.convRate}% conversão`}/>
+        <KPI label="Ticket Médio" value={fmt(kpis.avgTicket)} sub="por pedido pago" color="violet" icon="🎟️"/>
+        <KPI label="Taxa de Conversão" value={`${kpis.convRate}%`} sub="iniciado → pago" color="sky" icon="📈"/>
+      </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <KPI label="Pedidos Expirados" value={kpis.expiredCount} sub="sem pagamento" color="amber" icon="⏱️" delta={`-${Math.round(kpis.expiredCount/kpis.totalOrders*100)}% receita potencial perdida`}/>
+        <KPI label="Cancelados / Rejeitados" value={kpis.canceledCount} sub="pelo comprador ou sistema" color="red" icon="❌"/>
+        <KPI label="Receita Perdida Est." value={fmt(kpis.estimatedLoss)} sub={`${kpis.expiredCount} × ticket R$${kpis.avgTicket}`} color="rose" icon="⚠️"/>
+      </div>
+      <div className="bg-white rounded-2xl p-5 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <SecTitle>📈 Receita Diária</SecTitle>
+          <div className="flex gap-1">
+            {["receita","pedidos"].map(k=>(
+              <button key={k} onClick={()=>setMetric(k)} className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${metric===k?"bg-indigo-600 text-white":"bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
+                {k==="receita"?"Receita":"Pedidos"}
+              </button>
+            ))}
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={220}>
+          <AreaChart data={daily}>
+            <defs>
+              <linearGradient id="gradR" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={C.indigo} stopOpacity={0.25}/>
+                <stop offset="95%" stopColor={C.indigo} stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
+            <XAxis dataKey="date" tick={{fontSize:11}}/>
+            <YAxis tick={{fontSize:11}} tickFormatter={v=>metric==="receita"?`R$${v}`:v}/>
+            <Tooltip content={<CustomTooltip/>}/>
+            <Area type="monotone" dataKey={metric} name={metric} stroke={C.indigo} fill="url(#gradR)" strokeWidth={2.5}/>
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="bg-white rounded-2xl p-5 shadow-sm">
+          <SecTitle>🥧 Distribuição de Status</SecTitle>
+          <div className="flex items-center gap-6">
+            <ResponsiveContainer width={160} height={160}>
+              <PieChart>
+                <Pie data={statusData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" paddingAngle={3}>
+                  {statusData.map((e,i)=><Cell key={i} fill={e.color}/>)}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="flex flex-col gap-3 flex-1">
+              {statusData.map((s,i)=>(
+                <div key={i} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{background:s.color}}/>
+                    <span className="text-xs text-gray-500">{s.name}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm font-bold text-gray-800">{s.value}</span>
+                    <span className="text-xs text-gray-400 ml-1">({Math.round(s.value/kpis.totalOrders*100)}%)</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl p-5 shadow-sm">
+          <SecTitle>🏢 Parceiros — Share de Receita</SecTitle>
+          <div className="space-y-3">
+            {parceiros.slice(0,4).map((p,i)=>(
+              <div key={i}>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-gray-600 font-medium truncate max-w-[180px]">{p.nome}</span>
+                  <span className="text-gray-800 font-bold">{fmt(p.receita)}</span>
+                </div>
+                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full" style={{width:`${p.share}%`,background:i===0?C.indigo:i===1?C.violet:C.sky}}/>
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5">{p.pedidos} pedidos · {p.share}% do GMV</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── RECEITA ──────────────────────────────────────────────────────────────────
+function TabReceita({data}){
+  const {weekly,parceiros,categorias}=data;
+  const maxWeek=weekly.reduce((a,b)=>b.receita>a.receita?b:a,weekly[0]||{});
+  return (
+    <div className="space-y-5">
+      <div className="bg-white rounded-2xl p-5 shadow-sm">
+        <SecTitle>📅 Receita por Semana (R$)</SecTitle>
+        <ResponsiveContainer width="100%" height={240}>
+          <BarChart data={weekly} barSize={44}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
+            <XAxis dataKey="semana" tick={{fontSize:12}}/>
+            <YAxis tick={{fontSize:12}} tickFormatter={v=>`R$${(v/1000).toFixed(0)}k`}/>
+            <Tooltip content={<CustomTooltip/>}/>
+            <Bar dataKey="receita" name="receita" radius={[6,6,0,0]}>
+              {weekly.map((w,i)=><Cell key={i} fill={w.semana===maxWeek.semana?C.indigo:"#c7d2fe"}/>)}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+        {maxWeek.semana&&<p className="text-xs text-gray-400 mt-2 text-center">📌 Melhor semana: <span className="text-indigo-600 font-semibold">{maxWeek.semana} — {fmt(maxWeek.receita)}</span></p>}
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="bg-white rounded-2xl p-5 shadow-sm">
+          <SecTitle>🏢 Receita por Parceiro</SecTitle>
+          <div className="space-y-4">
+            {parceiros.map((p,i)=>(
+              <div key={i}>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm text-gray-700 font-medium truncate max-w-[200px]">{p.nome}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">{p.pedidos} pedidos</span>
+                    <span className="text-sm font-bold text-gray-800">{fmt(p.receita)}</span>
+                  </div>
+                </div>
+                <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full" style={{width:`${p.share}%`,background:[C.indigo,C.violet,C.sky,C.emerald,C.amber,"#f472b6"][i]||C.indigo}}/>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl p-5 shadow-sm">
+          <SecTitle>🗂️ Receita por Categoria</SecTitle>
+          <ResponsiveContainer width="100%" height={200}>
+            <PieChart>
+              <Pie data={categorias} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({percent})=>`${(percent*100).toFixed(0)}%`} labelLine={false}>
+                {categorias.map((e,i)=><Cell key={i} fill={e.color}/>)}
+              </Pie>
+              <Tooltip formatter={v=>fmt(v)}/>
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2">
+            {categorias.map((c,i)=>(
+              <div key={i} className="flex items-center gap-1.5 text-xs">
+                <div className="w-2.5 h-2.5 rounded-full" style={{background:c.color}}/>
+                <span className="text-gray-500">{c.name}</span>
+                <span className="text-gray-700 font-semibold">{fmt(c.value)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PRODUTOS ─────────────────────────────────────────────────────────────────
+function TabProdutos({data}){
+  const {topProdutos}=data;
+  return (
+    <div className="space-y-5">
+      <div className="bg-white rounded-2xl p-5 shadow-sm">
+        <SecTitle>🏆 Top Produtos por Receita</SecTitle>
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={topProdutos} layout="vertical" barSize={16}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false}/>
+            <XAxis type="number" tick={{fontSize:11}} tickFormatter={v=>`R$${v}`}/>
+            <YAxis type="category" dataKey="titulo" tick={{fontSize:10,fill:"#6b7280"}} width={220}/>
+            <Tooltip formatter={v=>fmt(v)}/>
+            <Bar dataKey="receita" name="Receita" radius={[0,6,6,0]}>
+              {topProdutos.map((_,i)=><Cell key={i} fill={i===0?C.indigo:i===1?C.violet:"#c7d2fe"}/>)}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="bg-white rounded-2xl p-5 shadow-sm">
+        <SecTitle>📋 Detalhamento</SecTitle>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100">
+                {["#","Produto","Receita","Pedidos","Ticket Médio"].map(h=><th key={h} className="text-left text-xs text-gray-400 font-semibold uppercase tracking-wide px-3 py-2">{h}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {topProdutos.map((p,i)=>(
+                <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                  <td className="px-3 py-3 text-indigo-600 font-bold">#{i+1}</td>
+                  <td className="px-3 py-3 text-gray-800 font-medium">{p.titulo}</td>
+                  <td className="px-3 py-3 text-emerald-600 font-bold">{fmt(p.receita)}</td>
+                  <td className="px-3 py-3 text-gray-500">{p.pedidos}</td>
+                  <td className="px-3 py-3 text-amber-600 font-semibold">{fmt(p.ticket)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── LISTA PRODUTOS ───────────────────────────────────────────────────────────
+function TabListaProdutos({data}){
+  const {todosProdutos}=data;
+  const [busca,setBusca]=useState("");
+  const [catFiltro,setCatFiltro]=useState("Todas");
+  const [ordenar,setOrdenar]=useState("receita");
+  const categorias=["Todas",...Array.from(new Set(todosProdutos.map(p=>p.categoria)))];
+  const filtered=todosProdutos
+    .filter(p=>catFiltro==="Todas"||p.categoria===catFiltro)
+    .filter(p=>p.titulo.toLowerCase().includes(busca.toLowerCase())||p.parceiro.toLowerCase().includes(busca.toLowerCase()))
+    .sort((a,b)=>b[ordenar]-a[ordenar]);
+  const catColor=c=>({Aniversário:"purple",Bares:"blue",Restaurantes:"green",Dates:"rose","Rolêzinho Econômico":"yellow","Vida Noturna":"gray"})[c]||"gray";
+  const convPct=p=>p.pedidos_total>0?Math.round((p.pedidos_pagos/p.pedidos_total)*100):0;
+  return (
+    <div className="space-y-5">
+      <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-wrap items-center gap-3">
+        <input type="text" placeholder="🔍 Buscar produto ou parceiro..." value={busca} onChange={e=>setBusca(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 w-64"/>
+        <div className="flex gap-1 flex-wrap">
+          {categorias.map(c=>(
+            <button key={c} onClick={()=>setCatFiltro(c)} className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${catFiltro===c?"bg-indigo-600 text-white":"bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>{c}</button>
+          ))}
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-xs text-gray-400">Ordenar:</span>
+          {[["receita","Receita"],["pedidos_pagos","Pagos"],["pedidos_total","Total"]].map(([k,l])=>(
+            <button key={k} onClick={()=>setOrdenar(k)} className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${ordenar===k?"bg-gray-800 text-white":"bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>{l}</button>
+          ))}
+        </div>
+      </div>
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <SecTitle>📦 {filtered.length} produto{filtered.length!==1?"s":""} encontrado{filtered.length!==1?"s":""}</SecTitle>
+          <span className="text-xs text-gray-400">Receita filtrada: <span className="font-bold text-indigo-600">{fmt(filtered.reduce((s,p)=>s+p.receita,0))}</span></span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                {["#","Produto","Parceiro","Categoria","Receita","Pagos","Total","Conversão","Ticket"].map(h=><th key={h} className="text-left text-xs text-gray-400 font-semibold uppercase tracking-wide px-4 py-3">{h}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((p,i)=>(
+                <tr key={i} className="border-t border-gray-50 hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 text-indigo-500 font-bold text-xs">{i+1}</td>
+                  <td className="px-4 py-3 text-gray-800 font-medium max-w-xs"><span className="line-clamp-2 leading-snug">{p.titulo}</span></td>
+                  <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{p.parceiro}</td>
+                  <td className="px-4 py-3"><Badge label={p.categoria} color={catColor(p.categoria)}/></td>
+                  <td className="px-4 py-3"><span className={`font-bold ${p.receita>0?"text-emerald-600":"text-gray-300"}`}>{p.receita>0?fmt(p.receita):"—"}</span></td>
+                  <td className="px-4 py-3"><span className={`font-semibold ${p.pedidos_pagos>0?"text-gray-800":"text-gray-300"}`}>{p.pedidos_pagos}</span></td>
+                  <td className="px-4 py-3 text-gray-500">{p.pedidos_total}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-14 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${convPct(p)>=60?"bg-emerald-400":convPct(p)>=30?"bg-amber-400":"bg-red-300"}`} style={{width:`${convPct(p)}%`}}/>
+                      </div>
+                      <span className="text-xs text-gray-500">{convPct(p)}%</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3"><span className={p.ticket>0?"text-amber-600 font-semibold":"text-gray-300"}>{p.ticket>0?fmt(p.ticket):"—"}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── FUNIL ────────────────────────────────────────────────────────────────────
+function TabFunil({data}){
+  const {funil,kpis,parceiros,categorias}=data;
+  const topParceiro=parceiros[0]||{};
+  const topCat=categorias[0]||{};
+  const topCatPct=kpis.totalRevenue>0?Math.round(topCat.value/kpis.totalRevenue*100):0;
+  const topParcPct=kpis.totalRevenue>0?Math.round((topParceiro.receita||0)/kpis.totalRevenue*100):0;
+  return (
+    <div className="space-y-5">
+      <div className="bg-white rounded-2xl p-5 shadow-sm">
+        <SecTitle>🔄 Funil de Conversão</SecTitle>
+        <div className="space-y-3 max-w-xl mx-auto">
+          {funil.map((f,i)=>(
+            <div key={i} className="flex items-center gap-4">
+              <span className="text-xs text-gray-400 w-40 text-right shrink-0">{f.label}</span>
+              <div className="flex-1 bg-gray-100 rounded-full h-9 overflow-hidden">
+                <div className={`h-full ${f.color} rounded-full flex items-center pl-4`} style={{width:`${f.pct}%`}}>
+                  <span className="text-white text-sm font-bold">{f.valor}</span>
+                </div>
+              </div>
+              <span className="text-xs text-gray-400 w-8 shrink-0">{f.pct}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-bold text-amber-700 mb-1">⚠️ Receita potencial perdida por expiração</p>
+          <p className="text-xs text-amber-600">{kpis.expiredCount} pedidos expiraram sem pagamento com ticket médio de {fmt(kpis.avgTicket)}. Um lembrete automático via WhatsApp nos primeiros 15 min pode recuperar grande parte disso.</p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-2xl font-black text-amber-600">{fmt(kpis.estimatedLoss)}</p>
+          <p className="text-xs text-amber-400">estimativa de perda</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="bg-white rounded-2xl p-5 shadow-sm border-l-4 border-amber-400">
+          <p className="text-2xl mb-2">⏱️</p>
+          <p className="text-sm font-bold text-gray-700 mb-1">{Math.round(kpis.expiredCount/kpis.totalOrders*100)}% expiram sem pagar</p>
+          <p className="text-xs text-gray-500 leading-relaxed">Considere aumentar o prazo de expiração ou enviar um lembrete de pagamento automático.</p>
+        </div>
+        <div className="bg-white rounded-2xl p-5 shadow-sm border-l-4 border-indigo-400">
+          <p className="text-2xl mb-2">🎂</p>
+          <p className="text-sm font-bold text-gray-700 mb-1">{topCat.name} = {topCatPct}% da receita</p>
+          <p className="text-xs text-gray-500 leading-relaxed">{topCat.name} gerou {fmt(topCat.value||0)} — {topCatPct}% da receita total. Vale criar campanhas sazonais para essa categoria.</p>
+        </div>
+        <div className="bg-white rounded-2xl p-5 shadow-sm border-l-4 border-emerald-400">
+          <p className="text-2xl mb-2">🏆</p>
+          <p className="text-sm font-bold text-gray-700 mb-1">1 parceiro = {topParcPct}% do GMV</p>
+          <p className="text-xs text-gray-500 leading-relaxed">{topParceiro.nome} concentra {fmt(topParceiro.receita||0)}. Diversificar parceiros reduz risco e abre espaço para crescimento.</p>
+        </div>
+      </div>
+      <div className="bg-white rounded-2xl p-5 shadow-sm">
+        <SecTitle>📌 Resumo do Período ({kpis.startDate} – {kpis.endDate} 2026)</SecTitle>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {[
+            {label:"GMV Gerado",value:fmt(kpis.totalRevenue),color:"text-indigo-600"},
+            {label:"Conversão",value:`${kpis.convRate}%`,color:"text-emerald-600"},
+            {label:"Ticket Médio",value:fmt(kpis.avgTicket),color:"text-violet-600"},
+            {label:"Top Parceiro",value:(topParceiro.nome||"—").split(" ").slice(0,2).join(" "),color:"text-amber-600"},
+          ].map((s,i)=>(
+            <div key={i} className="bg-gray-50 rounded-xl p-4 text-center">
+              <p className={`text-lg font-black ${s.color}`}>{s.value}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MAIN ─────────────────────────────────────────────────────────────────────
+function OrdersDashboard(){
+  const [activeTab,setActiveTab]=useState("overview");
+  const {data,loading,error,refetch,lastUpdated,isLive}=useOrdersSheet();
+  const {kpis}=data;
+
+  const tabComponents={
+    overview:<TabOverview data={data}/>,
+    receita:<TabReceita data={data}/>,
+    produtos:<TabProdutos data={data}/>,
+    lista:<TabListaProdutos data={data}/>,
+    funil:<TabFunil data={data}/>,
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-lg font-bold shadow">🗺️</div>
+          <div>
+            <p className="text-base font-bold text-gray-800">Where2Go</p>
+            <p className="text-xs text-gray-400">Dashboard de Vendas · Pedidos</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {isLive?(
+            <span className="text-xs bg-emerald-50 text-emerald-600 font-semibold px-3 py-1.5 rounded-lg border border-emerald-100">🟢 Google Sheets ao vivo</span>
+          ):SHEET_ID?(
+            <span className="text-xs bg-amber-50 text-amber-600 font-semibold px-3 py-1.5 rounded-lg border border-amber-100">⏳ Carregando…</span>
+          ):(
+            <span className="text-xs bg-gray-100 text-gray-400 font-semibold px-3 py-1.5 rounded-lg border border-gray-200">📋 Dados estáticos</span>
+          )}
+          <span className="text-xs bg-indigo-50 text-indigo-600 font-semibold px-3 py-1.5 rounded-lg border border-indigo-100">📅 {kpis.startDate} – {kpis.endDate} 2026</span>
+          <span className="text-xs bg-emerald-50 text-emerald-600 font-semibold px-3 py-1.5 rounded-lg border border-emerald-100">✅ {kpis.totalOrders} pedidos · {fmt(kpis.totalRevenue)}</span>
+          {isLive&&(
+            <button onClick={refetch} disabled={loading} className="text-xs bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">
+              {loading?"↻ Atualizando…":"↻ Atualizar"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Error */}
+      {error&&<div className="bg-red-50 border-b border-red-200 px-6 py-2 text-xs text-red-600">⚠️ Erro ao carregar do Sheets: {error}. Exibindo dados estáticos.</div>}
+
+      {/* Tabs */}
+      <div className="bg-white border-b border-gray-100 px-6">
+        <div className="flex gap-1">
+          {TABS.map(t=>(
+            <button key={t.id} onClick={()=>setActiveTab(t.id)} className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab===t.id?"border-indigo-600 text-indigo-600":"border-transparent text-gray-400 hover:text-gray-600"}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="px-6 py-6 max-w-7xl mx-auto">
+        {loading&&!isLive?(
+          <div className="flex items-center justify-center h-64 text-gray-400 text-sm gap-2">
+            <span className="animate-spin">↻</span> Carregando dados do Google Sheets…
+          </div>
+        ):tabComponents[activeTab]}
+      </div>
+
+      {lastUpdated&&(
+        <div className="px-6 pb-4 text-center text-xs text-gray-300">
+          Última atualização: {lastUpdated.toLocaleTimeString("pt-BR")}
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<OrdersDashboard/>);
+</script>
+</body>
+</html>
