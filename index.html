@@ -183,7 +183,8 @@ let D={
 let metric="receita",cat="Todas",sort="r",CH={};
 
 function parseOrders(rows){
-  const os=rows.map(r=>({biz:(r.business_name||"").trim(),date:(r.created_at||"").split("T")[0],price:parseFloat(r.price)||0,status:(r.status||"").trim().toLowerCase(),title:(r.title||"").trim(),cat:(r.category||"Outros").trim()})).filter(o=>o.date);
+  const parseD=s=>{s=(s||"").trim();const br=s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);if(br)return`${br[3]}-${br[2]}-${br[1]}`;return s.split("T")[0].split(" ")[0];};
+  const os=rows.map(r=>({biz:(r.business_name||"").trim(),date:parseD(r.created_at),price:parseFloat(r.price)||0,status:(r.status||"").trim().toLowerCase(),title:(r.title||"").trim(),cat:(r.category||"Outros").trim()})).filter(o=>o.date&&o.date.match(/^\d{4}-\d{2}-\d{2}$/));
   if(!os.length)return;
   const paid=os.filter(o=>PAID.includes(o.status)),exp=os.filter(o=>o.status==="expired"),canc=os.filter(o=>["cancelado","rejeitado"].includes(o.status));
   const rev=paid.reduce((s,o)=>s+o.price,0),ticket=paid.length?Math.round(rev/paid.length):0,conv=os.length?Math.round(paid.length/os.length*100):0;
@@ -294,7 +295,7 @@ function renderAll(live){
   const k=D.k;
   document.getElementById("badge-period").textContent=`📅 ${k.start} – ${k.end} 2026`;
   document.getElementById("badge-total").textContent=`✅ ${k.total} pedidos · ${fmt(k.rev)}`;
-  if(live){document.getElementById("badge-live").outerHTML=`<span class="text-xs bg-emerald-50 text-emerald-600 font-semibold px-3 py-1.5 rounded-lg border border-emerald-100"><span class="live-dot mr-1"></span>Google Sheets ao vivo</span>`;document.getElementById("btn-refresh").classList.remove("hidden");}
+  if(live){const bl=document.getElementById("badge-live");if(bl){bl.className="text-xs bg-emerald-50 text-emerald-600 font-semibold px-3 py-1.5 rounded-lg border border-emerald-100";bl.innerHTML='<span class="live-dot mr-1"></span>Google Sheets ao vivo';}const br=document.getElementById("btn-refresh");if(br)br.classList.remove("hidden");}
   renderOverview();
 }
 
