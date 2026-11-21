@@ -1,0 +1,8 @@
+# Palavras e nomes que o Whisper deve escrever certo (uma por linha).
+# Acrescente aqui nomes de destinos, parceiros, gírias da marca etc.
+Where2Go
+Claude
+Claude Code
+Reels
+Instagram
+TikTok
