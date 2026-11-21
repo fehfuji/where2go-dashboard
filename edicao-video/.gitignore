@@ -1,0 +1,22 @@
+node_modules/
+
+# Mídia não vai pro git (arquivos grandes; o ambiente na nuvem é temporário)
+*.mp4
+*.mov
+*.m4v
+*.webm
+*.mkv
+*.wav
+*.mp3
+*.m4a
+
+material-bruto/*
+referencias/*
+trabalho/*
+transcricoes/*
+exportados/*
+remotion/public/*
+!*/.gitkeep
+!remotion/public/marca/
+
+__pycache__/
