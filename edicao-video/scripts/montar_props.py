@@ -33,6 +33,8 @@ def main() -> None:
     p.add_argument("video")
     p.add_argument("transcricao")
     p.add_argument("projeto", help="pasta do projeto, ex.: projetos/meu-reels")
+    p.add_argument("--estilo", help="JSON do estilo lido da Central (ArtifactData get com out_dir)")
+    p.add_argument("--logo", help="arquivo do logo baixado da Central (vai para remotion/public/marca/)")
     a = p.parse_args()
 
     video = Path(a.video).resolve()
@@ -51,14 +53,32 @@ def main() -> None:
     projeto = Path(a.projeto)
     projeto.mkdir(parents=True, exist_ok=True)
     props_arq = projeto / "props.json"
+
+    # Estilo da Central -> campos que o template Remotion entende.
+    estilo = {}
+    if a.estilo:
+        doc = json.loads(Path(a.estilo).read_text())
+        doc = doc.get("data", doc)  # aceita o documento cru ou o envelope do ArtifactData
+        for campo in ("destaque", "fundoCartela", "corTexto", "palavrasPorLegenda",
+                      "tamanhoLegenda", "enquadramentoDividida"):
+            if doc.get(campo) is not None:
+                estilo[campo] = doc[campo]
+
+    marca = None
+    if a.logo:
+        logo = Path(a.logo)
+        (PUBLIC / "marca").mkdir(parents=True, exist_ok=True)
+        shutil.copy2(logo, PUBLIC / "marca" / logo.name)
+        marca = f"marca/{logo.name}"
+
     props = {
         "video": video.name,
         "duracao": duracao(video),
         "gancho": None,
         "cartelas": [],
         "zooms": [],
-        "marca": None,
-        "estilo": {},
+        "marca": marca,
+        "estilo": estilo,
         "palavras": palavras,
     }
     props_arq.write_text(json.dumps(props, ensure_ascii=False, indent=2))
