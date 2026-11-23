@@ -430,6 +430,16 @@ table.geral { width: 100%; border-collapse: collapse; font-size: 13.5px; min-wid
 .etapa-cab b { font-family: var(--font-display); font-size: 15px; }
 .etapa-cab span { font-family: var(--font-mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .etapa .pcard { background: var(--bg); }
+.etapa.drop-alvo { box-shadow: 0 0 0 2px var(--accent); background: var(--accent-soft); }
+@media (min-width: 721px) {
+  .etapas { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(236px, 1fr); align-items: stretch; overflow-x: auto; padding-bottom: 10px; scroll-snap-type: x proximity; }
+  .etapa { scroll-snap-align: start; align-content: start; }
+}
+.aprov { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 6px; white-space: nowrap; color: var(--c3); background: color-mix(in srgb, var(--c3) 12%, transparent); }
+.aprov .ic { width: 12px; height: 12px; }
+.aprov-linha { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 14px; }
+.aprov-linha .ic { width: 18px; height: 18px; color: var(--c3); }
+.pr-filtro select { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 10px; font-size: 13.5px; max-width: 100%; }
 .etapa .hint { padding: 0 4px; }
 .vchip { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 6px; color: var(--c2); background: color-mix(in srgb, var(--c2) 12%, transparent); white-space: nowrap; }
 .vchip .ic { width: 12px; height: 12px; }
@@ -655,8 +665,12 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
           <h2>Produção</h2>
           <p>Tudo o que está sendo feito, por etapa: do roteiro ao publicado. Os vídeos mostram também a etapa da edição com o Claude.</p>
         </div>
-        <button class="btn primary" type="button" id="pr-novo" hidden>Novo conteúdo</button>
+        <div class="painel-acoes pr-filtro">
+          <select id="pr-resp" aria-label="Filtrar por responsável"><option value="">Todos os responsáveis</option></select>
+          <button class="btn primary" type="button" id="pr-novo" hidden>Novo conteúdo</button>
+        </div>
       </div>
+      <p class="hint" id="pr-dica" style="margin:-6px 0 12px"></p>
       <div class="etapas" id="pr-lista"></div>
     </section>
 
@@ -830,7 +844,9 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       <label class="field"><span>Hora</span><input type="time" id="f-hora"></label>
     </div>
     <div class="so-edicao" style="margin-top:-10px"><button class="link-acao" type="button" id="f-sem-data">Tirar a data</button></div>
-    <label class="field so-edicao"><span>Prazo de entrega</span><input type="date" id="f-prazo" style="max-width:220px"></label>
+    <div class="field so-edicao"><span>Prazo de entrega</span>
+      <div class="row" style="align-items:center;gap:10px"><input type="date" id="f-prazo" aria-label="Prazo de entrega" style="max-width:200px"><button class="link-acao" type="button" id="f-prazo-sug" hidden>2 dias antes da data</button></div>
+    </div>
     <div class="field"><span>Formato</span><div class="chips" id="f-formato" role="group" aria-label="Formato"></div></div>
     <div class="row so-novo"><button class="btn primary" type="button" id="f-criar">Criar post</button><button class="btn" type="button" id="f-cancelar">Cancelar</button></div>
     <div class="field so-edicao"><span>Redes</span><div class="chips" id="f-redes" role="group" aria-label="Redes"></div></div>
@@ -892,6 +908,10 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
         </form>
       </details>
     </section>
+    <section class="f-sec so-edicao" id="f-aprov" aria-label="Aprovação">
+      <span class="eyebrow">Aprovação</span>
+      <div class="stack" style="gap:10px" id="f-aprov-corpo"></div>
+    </section>
     <section class="f-sec so-edicao" aria-label="Publicação">
       <span class="eyebrow">Publicação</span>
       <div class="prog">
@@ -933,7 +953,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     // Painel: conta escolhida, ordem dos posts, histórico diário da conta escolhida, conector Pipeboard
     pn: { sel: null, ordem: "views", hist: [], histDe: undefined, unsubHist: null, mcp: null, podeAtualizar: false, atualizando: false, viraram: new Set(),
       sample: null, analisando: null, podeBuscar: false },
-    config: [], isOwner: false, clientes: [], cli: "", bib: "referencias", aba: null,
+    config: [], isOwner: false, clientes: [], cli: "", bib: "referencias", aba: null, prResp: "", prArrastando: null, prPendente: false,
     filtro: null, aberto: null, unsubNotas: null,
     estiloSel: null, rascunho: null, modo: "rosto",
     // Calendário: ref = dia de referência do mês (ou da semana, no celular) que está na tela
@@ -1161,7 +1181,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     if (S.canWrite && pr.status === "revisao") {
       acoes.append(h("button", { class: "btn primary", type: "button", onclick: async (ev) => {
         const ok = await salvarProjeto(pr, { status: "pronto" }, ev.currentTarget, "Vídeo aprovado!");
-        if (ok && ETAPAS_ANTES.includes(statusPost(valorAtual(p, "status")).id)) salvarPost(p.id, { status: "aprovado" });
+        if (ok && ETAPAS_ANTES.includes(statusPost(valorAtual(p, "status")).id)) salvarPost(p.id, { status: "aprovado", aprovacao: { status: "aprovado", por: S.myId, em: agora() } });
       } }, "Aprovar vídeo"));
       acoes.append(h("button", { class: "btn", type: "button", onclick: (ev) => {
         if (!fv.notas.some((n) => !n.resolvida)) { toast("Escreva o que mudar nos comentários do vídeo antes de pedir ajustes."); $("#fv-nota-texto").focus(); return; }
@@ -1482,6 +1502,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     sobe: '<path d="M12 19V5M6 11l6-6 6 6"/>',
     desce: '<path d="M12 5v14M6 13l6 6 6-6"/>',
     alerta: '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/>',
+    relogio: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
     casa: '<path d="M4 11l8-6.5 8 6.5"/><path d="M6 9.5V19h12V9.5"/><path d="M10 19v-5h4v5"/>',
     calendario: '<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
     quadro: '<rect x="3.5" y="4.5" width="5" height="15" rx="1.5"/><rect x="10.5" y="4.5" width="5" height="10" rx="1.5"/><rect x="17.5" y="4.5" width="3" height="6" rx="1.2"/>',
@@ -1633,6 +1654,12 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     const st = STATUS.find((x) => x.id === pr.status) || STATUS[0];
     return h("span", { class: "vchip", style: `--c2: var(--st-${st.id})`, title: "Etapa da edição de vídeo" }, icone("filme"), "vídeo: " + st.nome.toLowerCase());
   }
+  function aprovChip(p) {
+    const a = p.aprovacao || {}; const st = statusPost(p.status).id;
+    if (st === "revisao") return h("span", { class: "aprov", style: "--c3: var(--st-revisao)" }, icone("relogio"), "aguardando aprovação"); // em Revisão = esperando aprovação, mesmo sem registro antigo
+    if (a.status === "ajustes" && ["roteiro", "producao"].includes(st)) return h("span", { class: "aprov", style: "--c3: var(--danger)" }, icone("alerta"), "ajustes pedidos");
+    return null;
+  }
   function cartaoPost(p, comHora, comData) {
     const st = statusPost(p.status);
     const nAnexos = (p.anexos || []).length, nRefs = (p.referencias || []).length;
@@ -1643,7 +1670,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       h("div", { class: "pmeta" },
         !S.cli && p.clienteId ? marcaCliente(p.clienteId) : null,
         comData ? h("span", { class: "hr" }, deIso(p.data) ? dataCurta(p.data) + (p.hora ? " " + p.hora : "") : "sem data") : comHora && p.hora ? h("span", { class: "hr" }, p.hora) : null,
-        pillPost(p.status), vchipDe(p), prazoEl(p),
+        pillPost(p.status), aprovChip(p), vchipDe(p), prazoEl(p),
         redes ? h("span", { class: "mono" }, redes) : null,
         (p.tags || []).slice(0, 2).map((t) => h("span", { class: "chip" }, t)),
         nAnexos ? h("span", { class: "cont", title: "Anexos" }, icone("clipe"), nAnexos) : null,
@@ -1894,7 +1921,8 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     opcoesPessoas($("#f-resp"), () => { const q = S.ficha && postPorId(S.ficha.id); return q ? valorAtual(q, "responsavel") : null; }, [["", "Sem responsável"]]);
     $("#f-resp-eu").hidden = ro || !S.myId || v("responsavel") === S.myId;
     $("#f-resp-outro").hidden = ro || !S.user;
-    renderTagsFicha(p); renderVideo(p); renderAnexos(p); renderRefsFicha(p);
+    renderTagsFicha(p); renderVideo(p); renderAnexos(p); renderRefsFicha(p); renderAprovacao(p);
+    $("#f-prazo-sug").hidden = ro || !dataOk || !!deIso(v("prazo"));
     const ag = p.agendamento || AGENDAMENTO_VAZIO;
     $("#f-ag-status").textContent = ROTULO_AGENDAMENTO[ag.status] || ROTULO_AGENDAMENTO.nao_agendado;
     $("#f-criado").replaceChildren("Criado por", pessoa(p.criadoPor, false, "alguém do time"), quando(p.criadoEm));
@@ -1940,6 +1968,10 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   });
   $("#f-hora").addEventListener("change", (ev) => { const f = S.ficha; if (!f || !f.id) return; salvarPost(f.id, { hora: ev.target.value || null }); atualizarFicha(); });
   $("#f-sem-data").addEventListener("click", () => { const f = S.ficha; if (!f || !f.id) return; salvarPost(f.id, { data: null, hora: null }).then((ok) => ok && toast("Data tirada")); $("#f-data").value = ""; $("#f-hora").value = ""; atualizarFicha(); });
+  $("#f-prazo-sug").addEventListener("click", () => {
+    const f = S.ficha; const p = f && postPorId(f.id); const d = p && deIso(valorAtual(p, "data")); if (!d) return;
+    salvarPost(p.id, { prazo: isoDia(somaDias(d, -2)) }); atualizarFicha();
+  });
   $("#f-prazo").addEventListener("change", (ev) => { const f = S.ficha; if (!f || !f.id) return; salvarPost(f.id, { prazo: ev.target.value || null }); atualizarFicha(); });
   // Cliente e conta do conteúdo
   function renderClienteConta(cid, contaId) {
@@ -1977,7 +2009,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
 
   function renderStatusFicha(atual) {
     $("#f-status").replaceChildren(...PSTATUS.map((s) => h("button", { class: "stf", type: "button", style: `--c: var(--ps-${s.id})`, "aria-pressed": String(s.id === atual), disabled: !S.canWrite,
-      onclick: () => { if (!S.ficha || !S.ficha.id || s.id === atual) return; salvarPost(S.ficha.id, { status: s.id }); atualizarFicha(); } }, s.nome)));
+      onclick: () => { if (!S.ficha || !S.ficha.id || s.id === atual) return; moverEtapa(S.ficha.id, s.id); atualizarFicha(); } }, s.nome)));
   }
   function renderFormatos(atual) {
     $("#f-formato").replaceChildren(...FORMATOS.map((fm) => h("button", { class: "opc", type: "button", "aria-pressed": String(fm.id === atual), disabled: !S.canWrite,
@@ -2641,9 +2673,14 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     }
     atrasados.sort((a, b) => a[2].localeCompare(b[2]));
     listaMini("#in-atrasados", atrasados.map(([p, t]) => miniPost(p, t, true)), "Nada atrasado.");
-    const proximos = posts.filter((p) => (p.data === hoje || p.data === amanha) && statusPost(p.status).id !== "publicado")
-      .sort((a, b) => (a.data + (a.hora || "99")).localeCompare(b.data + (b.hora || "99")));
-    listaMini("#in-hoje", proximos.map((p) => miniPost(p, (p.data === hoje ? "hoje" : "amanhã") + (p.hora ? " " + p.hora : ""), false)), "Nada marcado para hoje nem amanhã.");
+    const proximos = [];
+    for (const p of posts) {
+      const st = statusPost(p.status).id;
+      if ((p.data === hoje || p.data === amanha) && st !== "publicado") proximos.push([p, (p.data === hoje ? "hoje" : "amanhã") + (p.hora ? " " + p.hora : ""), p.data + (p.hora || "99")]);
+      else if ((p.prazo === hoje || p.prazo === amanha) && ETAPAS_ANTES.includes(st) && st !== "ideia") proximos.push([p, "prazo " + (p.prazo === hoje ? "hoje" : "amanhã"), p.prazo + "00"]);
+    }
+    proximos.sort((a, b) => a[2].localeCompare(b[2]));
+    listaMini("#in-hoje", proximos.map(([p, t]) => miniPost(p, t, false)), "Nada marcado nem com prazo para hoje e amanhã.");
     const aprovar = [];
     for (const p of posts) {
       const pr = p.projetoId ? S.projetos.find((x) => x.id === p.projetoId) : null;
@@ -2715,29 +2752,108 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     if (acao === "producao") { if (await salvarPost(id, { status: "roteiro" })) { toast("Foi para a produção. Escolha a data na ficha."); abrirFicha(id); } }
     else if (acao === "arquivar") { if (await salvarPost(id, { status: "arquivado" })) toast("Ideia arquivada"); }
     else if (acao === "voltar") { if (await salvarPost(id, { status: "ideia" })) toast("Voltou para a caixa de ideias"); }
+    else if (acao === "avancar") { const p = postPorId(id); const prox = p && PROXIMA[statusPost(p.status).id]; if (prox) moverEtapa(id, prox[0]); }
+    else if (acao === "ajustes") { abrirFicha(id); setTimeout(() => { const t = $("#f-coment"); t.scrollIntoView({ block: "center" }); t.focus(); toast("Escreva o que ajustar e toque em “Pedir ajustes”."); }, 300); }
+  }
+  // Mudar de etapa (quadro, ficha e cartões): Revisão pede aprovação; Aprovado registra quem aprovou
+  async function moverEtapa(id, etapa) {
+    const p = postPorId(id); if (!p || !S.canWrite || !S.db) return false;
+    const atual = statusPost(valorAtual(p, "status")).id; if (atual === etapa) return false;
+    const campos = { status: etapa }; const a = valorAtual(p, "aprovacao");
+    if (etapa === "revisao") campos.aprovacao = { status: "pendente", por: S.myId, em: agora() };
+    else if (etapa === "aprovado") campos.aprovacao = { status: "aprovado", por: S.myId, em: agora() };
+    else if (["ideia", "roteiro", "producao"].includes(etapa) && a && a.status !== "ajustes") campos.aprovacao = null;
+    const ok = await salvarPost(id, campos);
+    if (ok) toast(etapa === "aprovado" ? "Aprovado" : etapa === "revisao" ? "Mandado para aprovação" : `Agora em ${statusPost(etapa).nome}`);
+    return ok;
+  }
+  // Aprovação na ficha
+  function renderAprovacao(p) {
+    const el = $("#f-aprov-corpo"); const a = valorAtual(p, "aprovacao"); const st = statusPost(valorAtual(p, "status")).id;
+    const linha = (ic, cor, ...partes) => h("div", { class: "aprov-linha", style: `--c3: ${cor}` }, icone(ic), ...partes);
+    const quem = (id) => pessoa(id, false, "alguém do time");
+    let estado;
+    if (a && a.status === "aprovado") estado = linha("check", "var(--bom)", h("b", null, "Aprovado"), h("span", { class: "hint" }, "por"), quem(a.por), h("span", { class: "hint" }, quando(a.em)));
+    else if (a && a.status === "pendente") estado = linha("relogio", "var(--st-revisao)", h("b", null, "Aguardando aprovação"), h("span", { class: "hint" }, "pedida por"), quem(a.por), h("span", { class: "hint" }, quando(a.em)));
+    else if (st === "revisao") estado = linha("relogio", "var(--st-revisao)", h("b", null, "Aguardando aprovação"));
+    else if (a && a.status === "ajustes") estado = linha("alerta", "var(--danger)", h("b", null, "Ajustes pedidos"), h("span", { class: "hint" }, "por"), quem(a.por), h("span", { class: "hint" }, quando(a.em) + " · veja os comentários"));
+    else estado = h("p", { class: "hint" }, "Ainda não foi para aprovação. Quando estiver pronto para alguém do time revisar, mande para aprovação.");
+    const botoes = [];
+    if (S.canWrite && S.db) {
+      if (["ideia", "roteiro", "producao"].includes(st)) botoes.push(h("button", { class: "btn", type: "button", onclick: () => moverEtapa(p.id, "revisao").then(atualizarFicha) }, "Mandar para aprovação"));
+      if (st === "revisao") {
+        botoes.push(h("button", { class: "btn primary", type: "button", onclick: () => moverEtapa(p.id, "aprovado").then(atualizarFicha) }, "Aprovar"));
+        botoes.push(h("button", { class: "btn", type: "button", onclick: (ev) => pedirAjustes(p, ev.currentTarget) }, "Pedir ajustes"));
+      }
+    }
+    poe(el, estado, botoes.length ? h("div", { class: "detail-actions" }, botoes) : null);
+    resolverPessoas(el);
+  }
+  async function pedirAjustes(p, btn) {
+    const t = $("#f-coment"); const texto = t.value.trim();
+    if (!texto) { t.scrollIntoView({ block: "center" }); t.focus(); toast("Escreva nos comentários o que ajustar e toque em “Pedir ajustes” de novo."); return; }
+    const ok = await salvando(btn, async () => {
+      await S.db.collection(`posts/${p.id}/comentarios`).add({ texto: "Ajustes pedidos: " + texto, autor: S.myId, criadoEm: agora() });
+      await gravarPost(p.id, { status: "producao", aprovacao: { status: "ajustes", por: S.myId, em: agora() } });
+    });
+    if (ok) { t.value = ""; toast("Ajustes pedidos. O post voltou para Produção."); }
   }
 
-  // ---------- PRODUÇÃO: uma coluna por etapa ----------
+  // ---------- PRODUÇÃO: quadro por etapa ----------
   const ETAPAS_PRODUCAO = ["roteiro", "producao", "revisao", "aprovado", "agendado", "publicado"];
+  const PROXIMA = { roteiro: ["producao", "Começar produção"], producao: ["revisao", "Mandar para aprovação"], revisao: ["aprovado", "Aprovar"], aprovado: ["agendado", "Marcar como agendado"], agendado: ["publicado", "Marcar como publicado"] };
+  function cartaoProducao(p) {
+    const card = cartaoPost(p, true, true);
+    const st = statusPost(p.status).id; const prox = PROXIMA[st];
+    if (S.canWrite && S.db && prox) card.append(h("div", { class: "triagem" },
+      h("button", { class: "btn" + (st === "revisao" ? " primary" : ""), type: "button", "data-acao": "avancar" }, prox[1]),
+      st === "revisao" ? h("button", { class: "btn ghost", type: "button", "data-acao": "ajustes" }, "Pedir ajustes") : null));
+    return card;
+  }
   function renderProducao() {
+    if (S.prArrastando) { S.prPendente = true; return; }
+    S.prPendente = false;
     const el = $("#pr-lista"); $("#pr-novo").hidden = !(S.canWrite && S.db);
+    opcoesPessoas($("#pr-resp"), () => S.prResp || "", [["", "Todos os responsáveis"], ["_", "Sem responsável"]]);
+    $("#pr-dica").textContent = podeArrastar() ? "Arraste os cartões entre as colunas para mudar a etapa. Levar para Aprovado conta como aprovação sua." : "";
     if (!S.loaded.posts) { poe(el, h("div", { class: "empty", style: "grid-column:1/-1" }, h("strong", null, "Carregando…"), "Buscando a produção da equipe.")); return; }
-    const posts = S.posts.filter((p) => noEscopo(p.clienteId));
+    const posts = S.posts.filter((p) => noEscopo(p.clienteId) && (!S.prResp || (S.prResp === "_" ? !p.responsavel : p.responsavel === S.prResp)));
     const desde = isoDia(somaDias(new Date(), -14));
-    const chave = (p) => (deIso(p.data) ? p.data + (p.hora || "") : "9999");
+    const chave = (p) => (deIso(p.prazo) ? p.prazo : deIso(p.data) ? p.data : "9999") + (p.hora || ""); // o que vence primeiro fica em cima
     const ordem = (a, b) => chave(a).localeCompare(chave(b)) || (a.titulo || "").localeCompare(b.titulo || "", "pt-BR");
     const grupos = ETAPAS_PRODUCAO.map((id) => {
       let l = posts.filter((p) => statusPost(p.status).id === id);
-      l = id === "publicado" ? l.filter((p) => !deIso(p.data) || p.data >= desde).sort((a, b) => ordem(b, a)) : l.sort(ordem);
+      l = id === "publicado" ? l.filter((p) => !deIso(p.data) || p.data >= desde).sort((a, b) => (b.data || "").localeCompare(a.data || "")) : l.sort(ordem);
       return { st: statusPost(id), l };
     });
-    if (!grupos.some((g) => g.l.length)) { poe(el, h("div", { class: "empty", style: "grid-column:1/-1" }, h("strong", null, "Nada em produção"), "Mande uma ideia para a produção em Ideias, ou toque em “Novo conteúdo”.")); return; }
-    poe(el, ...grupos.map(({ st, l }) => h("section", { class: "etapa", style: `--c: var(--ps-${st.id})`, "aria-label": `${st.nome}: ${l.length}` },
+    if (!grupos.some((g) => g.l.length) && !podeArrastar()) { poe(el, h("div", { class: "empty", style: "grid-column:1/-1" }, h("strong", null, S.prResp ? "Nada com esse responsável" : "Nada em produção"), S.prResp ? "Escolha outro responsável no filtro." : "Mande uma ideia para a produção em Ideias, ou toque em “Novo conteúdo”.")); return; }
+    poe(el, ...grupos.map(({ st, l }) => h("section", { class: "etapa", "data-etapa": st.id, style: `--c: var(--ps-${st.id})`, "aria-label": `${st.nome}: ${l.length}` },
       h("div", { class: "etapa-cab" }, h("b", null, st.nome), h("span", null, l.length)),
-      l.length ? l.map((p) => cartaoPost(p, true, true)) : h("p", { class: "hint" }, st.id === "publicado" ? "Nada publicado nos últimos 14 dias." : "Nada nesta etapa."))));
+      l.length ? l.map(cartaoProducao) : h("p", { class: "hint" }, st.id === "publicado" ? "Nada publicado nos últimos 14 dias." : podeArrastar() ? "Arraste um cartão para cá." : "Nada nesta etapa."))));
     resolverPessoas(el);
   }
   $("#pr-novo").addEventListener("click", () => novaFicha(null));
+  $("#pr-resp").addEventListener("change", (ev) => { S.prResp = ev.target.value; renderProducao(); });
+  // Arrastar entre colunas (computador)
+  let alvoPr = null;
+  function marcarAlvoPr(el) { if (alvoPr === el) return; if (alvoPr) alvoPr.classList.remove("drop-alvo"); alvoPr = el; if (el) el.classList.add("drop-alvo"); }
+  function fimArrastoPr() { document.querySelectorAll("#pr-lista .arrastando").forEach((x) => x.classList.remove("arrastando")); marcarAlvoPr(null); S.prArrastando = null; if (S.prPendente) renderProducao(); }
+  $("#tab-producao").addEventListener("dragstart", (ev) => {
+    const c = elDe(ev.target).closest('[data-id][draggable="true"]'); if (!c) return;
+    ev.dataTransfer.setData("text/plain", c.dataset.id); ev.dataTransfer.effectAllowed = "move";
+    S.prArrastando = c.dataset.id; requestAnimationFrame(() => c.classList.add("arrastando"));
+  });
+  $("#tab-producao").addEventListener("dragend", fimArrastoPr);
+  $("#tab-producao").addEventListener("dragover", (ev) => {
+    if (!S.prArrastando) return;
+    const alvo = elDe(ev.target).closest("[data-etapa]"); marcarAlvoPr(alvo);
+    if (alvo) { ev.preventDefault(); ev.dataTransfer.dropEffect = "move"; }
+  });
+  $("#tab-producao").addEventListener("drop", (ev) => {
+    const alvo = elDe(ev.target).closest("[data-etapa]"); const id = S.prArrastando;
+    if (!alvo || !id) return;
+    ev.preventDefault(); fimArrastoPr(); moverEtapa(id, alvo.dataset.etapa);
+  });
 
   // Tocar num cartão abre a ficha (Início, Ideias, Produção)
   for (const aba of ["#tab-inicio", "#tab-ideias", "#tab-producao"]) {

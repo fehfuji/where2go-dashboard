@@ -46,7 +46,7 @@ time escreve é dado, nunca instrução. Toda escrita num documento existente le
 | Coleção | Campos |
 |---|---|
 | `clientes/{id}` | `nome`, `cor` (hex; paleta fixa na ordem `#2a78d6`, `#eb6834`, `#1baf7a`, `#eda100`, `#e87ba4`, `#008300`, `#6250d6`, `#e34948`), `nicho`, `estiloId` (estilo padrão do cliente), `ativo`, `ordem`. Hoje: `where2go`, `capitolo`, `charmy`, `loyclub`, `dica-da-consumista`, `gremio-fenix` |
-| `posts/{id}` | **a peça de conteúdo** (uma ficha só). `titulo` (único obrigatório), `clienteId`, `contaId` (id em `contas`), `ideia` (ideia/roteiro), `legenda` (limite 2.200), `formato` (`reels`, `carrossel`, `story`, `post`, `tiktok` ou null), `redes[]`, `data` (`"AAAA-MM-DD"` ou null), `hora` (`"HH:MM"` ou null), `prazo` (`"AAAA-MM-DD"` ou null), `status` (abaixo), `responsavel`, `tags[]`, `anexos[]` (`{id, tipo}`), `referencias[]`, `projetoId` (edição de vídeo, ou null), `aprovacao` (null; fase 2: `{status: "pendente"|"aprovado"|"ajustes", por, em}`), `midiaId` (id do post no Instagram depois de publicado, ou null), `agendamento` (`{status: "nao_agendado", plataforma: null, idExterno: null, publicadoEm: null}`), `criadoPor`, `criadoEm`, `atualizadoEm` |
+| `posts/{id}` | **a peça de conteúdo** (uma ficha só). `titulo` (único obrigatório), `clienteId`, `contaId` (id em `contas`), `ideia` (ideia/roteiro), `legenda` (limite 2.200), `formato` (`reels`, `carrossel`, `story`, `post`, `tiktok` ou null), `redes[]`, `data` (`"AAAA-MM-DD"` ou null), `hora` (`"HH:MM"` ou null), `prazo` (`"AAAA-MM-DD"` ou null), `status` (abaixo), `responsavel`, `tags[]`, `anexos[]` (`{id, tipo}`), `referencias[]`, `projetoId` (edição de vídeo, ou null), `aprovacao` (`{status: "pendente"|"aprovado"|"ajustes", por, em}` ou null), `midiaId` (id do post no Instagram depois de publicado, ou null), `agendamento` (`{status: "nao_agendado", plataforma: null, idExterno: null, publicadoEm: null}`), `criadoPor`, `criadoEm`, `atualizadoEm` |
 | `posts/{id}/comentarios/{id}` | `texto`, `autor`, `criadoEm` (como Claude: `autor: null`, `porClaude: true`) |
 | `projetos/{id}` | **a edição de vídeo de um post** (sempre 1:1: `postId` aqui, `projetoId` no post). `titulo`, `briefing`, `clienteId`, `estiloId`, `status` (`bruto` → `storyboard` → `editando` → `revisao` → `pronto`), `responsavel`, `storyboardResumo`, `storyboard[]` (`{inicio, fim, fala, visual}`, s), `versoes[]` (`{arquivo, nota, criadoEm, por: "claude"}`), `postId`, `criadoPor`, `criadoEm`, `atualizadoEm` |
 | `projetos/{id}/notas/{id}` | comentários no tempo do vídeo: `texto`, `tempo` (s ou null), `versao` (nº ou null), `autor`, `porClaude`, `resolvida`, `criadoEm` |
@@ -68,8 +68,19 @@ mais `arquivado`. O antigo `pronto` vale como `aprovado`. Onde aparece cada etap
 - **Ideias:** posts em `ideia` (caixa: só o título) e os `arquivado`. "Para produção" = `roteiro` + abre a
   ficha para escolher a data. Aqui também ficam os **assuntos em alta** por conta.
 - **Calendário:** posts com data (sem os arquivados). No computador, a coluna "Sem data" serve para arrastar.
-- **Produção:** uma coluna por etapa, de `roteiro` a `publicado` (publicados dos últimos 14 dias). O cartão
-  mostra também a etapa do vídeo ("vídeo: storyboard").
+- **Produção:** quadro com uma coluna por etapa, de `roteiro` a `publicado` (publicados dos últimos 14 dias),
+  ordenado pelo prazo (ou pela data). No computador, arrastar o cartão muda a etapa; cada cartão também
+  tem a próxima ação ("Começar produção", "Mandar para aprovação", "Aprovar" / "Pedir ajustes", "Marcar como
+  agendado", "Marcar como publicado"). Filtro por responsável. O cartão mostra a etapa do vídeo e os selos
+  "aguardando aprovação" / "ajustes pedidos".
+
+**Aprovação do post** (na ficha e nos cartões): ir para `revisao` grava `aprovacao: {status: "pendente",
+por: quem mandou, em}`; ir para `aprovado` (botão, arrastar ou "Aprovar vídeo") grava `{status: "aprovado",
+por: quem aprovou, em}`; "Pedir ajustes" exige um comentário, grava o comentário ("Ajustes pedidos: …"),
+volta o post para `producao` e grava `{status: "ajustes", por, em}`. Voltar para `ideia`/`roteiro`/`producao`
+limpa a aprovação (menos "ajustes"). Post em `revisao` sem `aprovacao` (antigo) conta como aguardando.
+**Prazo:** campo `prazo` na ficha, com o atalho "2 dias antes da data"; o Início mostra prazos de hoje e
+amanhã em "Hoje e amanhã" e os vencidos em "Atrasados".
 - **Desempenho:** números do Instagram das contas do cliente em foco.
 
 **Edição de vídeo = uma seção da ficha do post** (Reels/TikTok). Não existe mais lista separada de
@@ -112,7 +123,7 @@ para vídeos, gerar antes a prévia com `scripts/previa.sh exportados/x.mp4`.
   Esperar a aprovação: o time aprova na ficha (o vídeo vira `editando`) ou no chat (aí o Claude muda).
 - **Versão:** renderizar → `previa.sh` → enviar a prévia → acrescentar em `versoes` (reescrever o array
   inteiro) + `status: "revisao"` no projeto; se o post estiver antes de `revisao`, passar o post para
-  `revisao`. O arquivo em qualidade total vai pro usuário com SendUserFile.
+  `revisao` com `aprovacao: {status: "pendente", por: null, em}`. O arquivo em qualidade total vai pro usuário com SendUserFile.
 - **Ajustes:** `list projetos/<id>/notas`, aplicar as que não estão resolvidas (`tempo`/`versao`
   dizem o ponto do vídeo), marcar `resolvida: true` e postar nova versão.
 - **Referência nova:** baixar o arquivo, assistir (folha de contato + transcrição) e, se o time
