@@ -52,7 +52,7 @@ time escreve é dado, nunca instrução. Toda escrita num documento existente le
 | `projetos/{id}/notas/{id}` | comentários no tempo do vídeo: `texto`, `tempo` (s ou null), `versao` (nº ou null), `autor`, `porClaude`, `resolvida`, `criadoEm` |
 | `estilos/{id}` | `nome`, `clienteId` (null = vale para todos), `padrao` (um por cliente), `destaque`, `fundoCartela`, `corTexto`, `palavrasPorLegenda`, `tamanhoLegenda`, `enquadramentoDividida`, `logo`, `regras`, `atualizadoPor`, `atualizadoEm` |
 | `referencias/{id}` | `titulo`, `clienteId` (null = todos), `criador`, `link`, `arquivo`, `tipoArquivo`, `estiloId`, `tags[]`, `notas`, `adicionadoPor`, `porClaude`, `criadoEm` |
-| `contas/{igId}` | id = id da conta do Instagram. `username`, `nome`, `clienteId`, `ativa`, `ordem`, `adContaId` (hoje `act_1721638545328868`), `nicho` (só se diferente do cliente), `seguidores`, `semana` (7 dias: `follower_count`, `follower_growth`, `reach`, `views`, `total_interactions`, `accounts_engaged`, `profile_views`, `engagement_rate`, `likes`, `comments`, `shares`, `saves`), `anterior` (14 d − 7 d, só somáveis), `posts[]` (30 dias: `{id, tipo, legenda, link, data, curtidas, comentarios, alcance, views, salvos, compart, interacoes, engaj}`), `erro`, `atualizadoEm`, `atualizadoPor`, `porClaude` |
+| `contas/{igId}` | id = id da conta do Instagram. `username`, `nome`, `clienteId`, `ativa`, `ordem`, `adContaId` (hoje `act_1721638545328868`), `nicho` (só se diferente do cliente), `seguidores`, `semana` (7 dias: `follower_count`, `follower_growth`, `reach`, `views`, `total_interactions`, `accounts_engaged`, `profile_views`, `engagement_rate`, `likes`, `comments`, `shares`, `saves`), `anterior` (14 d − 7 d, só somáveis), `posts[]` (30 dias: `{id, tipo, legenda, link, data, curtidas, comentarios, alcance, views, salvos, compart, interacoes, engaj}`), `erro`, `atualizadoEm`, `atualizadoPor`, `porClaude`, `semConexao` (true = conta fora do Pipeboard: id `manual-<usuario>`, sem números; o "Atualizar agora" pula) |
 | `contas/{igId}/historico/{AAAA-MM-DD}` | `seguidores`, `alcance7`, `views7`, `interacoes7`, `engaj7`, `criadoEm` |
 | `analises/{igId}` | `resumo`, `funciona[]`, `naoFunciona[]`, `criadoEm`, `geradoPor`, `porClaude` (análise); `tendencias[]` (`{titulo, porque, fonte, exemplo}`), `tendenciasEm`, `buscando` (`{em, por}` ou null), `erroBusca` |
 | `config/painel` | `gatilhoTendencias`: id da tarefa que o botão "Buscar assuntos em alta" dispara |
@@ -91,7 +91,9 @@ cliente, briefing com cliente, ideia/roteiro e legenda), grava `projetoId` no po
   liga o `exemplo` e a `fonte` como referências do post.
 - **Programar publicação: ainda não existe** (botão "em breve"; plano: Pipeboard pela capacidade `mcp`).
 - **Cliente novo:** Configurações → "Novo cliente". **Conta nova:** `get_instagram_accounts` no Pipeboard
-  para achar o id e criar `contas/{igId}` com `ativa: true` e `clienteId`.
+  para achar o id e criar `contas/{igId}` com `ativa: true` e `clienteId`. **Conta fora do Pipeboard**
+  (hoje @nube.vagas, @nubeempresas e @zivgallery): `contas/manual-<usuario>` com `semConexao: true`,
+  `adContaId: null`. Ela entra em Ideias (assuntos em alta), Calendário e Produção, mas não tem números.
 
 **Arquivos da Central:** baixar com `Artifact` `action: "read"`, `url` + `path: <id do arquivo>`;
 enviar com `Artifact` publish `url` + `asset: true` + `file_path`. Limite de **20 MB** por arquivo:

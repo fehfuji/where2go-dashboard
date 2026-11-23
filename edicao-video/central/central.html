@@ -399,6 +399,7 @@ table.geral { width: 100%; border-collapse: collapse; font-size: 13.5px; min-wid
     background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgb(0 0 0 / 0.2); }
   .toast { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
 }
+@media (max-width: 430px) { .nav { grid-template-columns: repeat(5, minmax(0, 1fr)) 46px; } .nav a, .nav-mais { font-size: 9.5px; letter-spacing: -0.02em; } }
 @media (max-width: 560px) {
   .cli-sel { order: 3; flex: 1 1 100%; }
   .cli-sel select { width: 100%; }
@@ -2222,7 +2223,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   function renderChipsContas(alvo, at, c, aoEscolher) {
     poe(alvo, ...at.map((x) => h("button", { class: "conta-btn", type: "button", "aria-pressed": String(!!c && x.id === c.id),
       onclick: () => { S.pn.sel = x.id; gravarLocal("painel.conta", x.id); aoEscolher(); } },
-      h("b", null, "@" + (x.username || "conta")), h("span", null, [!S.cli && x.clienteId ? nomeCliente(x.clienteId) : null, ehNum(x.seguidores) ? numero(x.seguidores) + " seguidores" : "sem números ainda"].filter(Boolean).join(" · ")))));
+      h("b", null, "@" + (x.username || "conta")), h("span", null, [!S.cli && x.clienteId ? nomeCliente(x.clienteId) : null, x.semConexao ? "sem conexão" : ehNum(x.seguidores) ? numero(x.seguidores) + " seguidores" : "sem números ainda"].filter(Boolean).join(" · ")))));
   }
   const analiseDe = (id) => S.analises.find((a) => a.id === id) || null;
 
@@ -2269,14 +2270,24 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     const at = contasEscopo(); const c = contaSel();
     if (c) S.pn.sel = c.id;
     assinarHistorico(c ? c.id : null);
-    $("#pn-atualizar").hidden = !(S.pn.podeAtualizar && S.canWrite && S.db && at.length);
-    $("#pn-atualizar").textContent = at.length > 1 ? `Atualizar ${at.length} contas` : "Atualizar agora";
+    const conectadas = at.filter((x) => !x.semConexao); // contas sem conexão com o Pipeboard não têm números
+    $("#pn-atualizar").hidden = !(S.pn.podeAtualizar && S.canWrite && S.db && conectadas.length);
+    $("#pn-atualizar").textContent = conectadas.length > 1 ? `Atualizar ${conectadas.length} contas` : "Atualizar agora";
     renderChipsContas($("#pn-contas"), at, c, renderTudo);
-    const vazio = (alvo, titulo, texto) => poe($(alvo), h("div", { class: "empty" }, h("strong", null, titulo), texto));
+    const vazio = (alvo, titulo, texto) => poe($(alvo), h("div", { class: "empty", style: "grid-column:1/-1" }, h("strong", null, titulo), texto));
     const limpar = () => { for (const s of ["#pn-fonte", "#pn-analise", "#pn-formatos", "#pn-tops", "#pn-geral"]) poe($(s)); $("#pn-analisar").hidden = true; };
     if (!S.loaded.contas) { limpar(); vazio("#pn-kpis", "Carregando o Desempenho…", "Buscando as contas e os números da equipe."); return; }
     if (!at.length) { limpar(); vazio("#pn-kpis", clienteEmFoco() ? "Este cliente não tem conta do Instagram" : "Nenhuma conta do Instagram",
       S.contas.length ? "Ligue uma conta a este cliente em Configurações → Contas do Instagram." : "Peça pro Claude: “adiciona as contas do Instagram na Central”."); return; }
+    if (c.semConexao) {
+      poe($("#pn-fonte"), "Conta sem conexão com o Pipeboard: os números do Instagram dela não entram na Central.");
+      vazio("#pn-kpis", "@" + (c.username || "conta") + " não está conectada", "Ideias, calendário, produção e assuntos em alta funcionam normalmente para ela. Os números só aparecem se a conta for ligada ao Pipeboard.");
+      $("#pn-analisar").hidden = true;
+      poe($("#pn-analise"), h("p", { class: "hint" }, "Sem os números desta conta, não há análise."));
+      poe($("#pn-formatos"), h("p", { class: "hint" }, "Sem os números desta conta."));
+      poe($("#pn-tops"), h("li", { class: "hint" }, "Sem os números desta conta."));
+      renderGeral(at, c); return;
+    }
     renderFonte(c); renderKpis(c); renderAnalise(c); renderPorFormato(c); renderTops(c); renderGeral(at, c);
   }
   const quemAtualizou = (c) => (c.porClaude ? h("span", null, "pelo Claude") : c.atualizadoPor ? pessoa(c.atualizadoPor, false) : null);
@@ -2486,7 +2497,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
         h("td", null, h("button", { class: "link-acao", type: "button", onclick: () => { S.pn.sel = x.id; gravarLocal("painel.conta", x.id); renderPainel(); window.scrollTo({ top: 0, behavior: "smooth" }); } }, "@" + (x.username || "conta"))),
         h("td", { class: "nr" }, numero(x.seguidores)), h("td", { class: "nr" }, numero(s.views)),
         h("td", { class: "nr" }, deltaEl(variacao(s.views, a.views)) || "—"), h("td", { class: "nr" }, pct(s.engagement_rate)),
-        h("td", { class: "nr" }, numero(s.total_interactions)), h("td", null, x.erro ? h("span", { style: "color:var(--danger)" }, "falhou") : x.atualizadoEm ? quando(x.atualizadoEm) : "—"));
+        h("td", { class: "nr" }, numero(s.total_interactions)), h("td", null, x.semConexao ? "sem conexão" : x.erro ? h("span", { style: "color:var(--danger)" }, "falhou") : x.atualizadoEm ? quando(x.atualizadoEm) : "—"));
     };
     poe($("#pn-geral"), h("table", { class: "geral" },
       h("thead", null, h("tr", null, h("th", null, "Conta"), h("th", { class: "nr" }, "Seguidores"), h("th", { class: "nr" }, "Visualizações"), h("th", { class: "nr" }, "vs semana antes"), h("th", { class: "nr" }, "Engaj."), h("th", { class: "nr" }, "Interações"), h("th", null, "Atualizado"))),
@@ -2495,13 +2506,13 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   function renderConfigContas() {
     const box = $("#pn-config-lista");
     const todas = [...S.contas].sort((a, b) => (ehNum(a.ordem) ? a.ordem : 99) - (ehNum(b.ordem) ? b.ordem : 99));
-    const assin = JSON.stringify([todas.map((x) => [x.id, x.username, x.ativa, x.nicho, x.clienteId]), S.canWrite, S.clientes.map((c) => [c.id, c.nome, c.ativo])]);
+    const assin = JSON.stringify([todas.map((x) => [x.id, x.username, x.ativa, x.nicho, x.clienteId, x.semConexao]), S.canWrite, S.clientes.map((c) => [c.id, c.nome, c.ativo])]);
     if (box.dataset.assin === assin) return; // não atrapalha quem está digitando
     box.dataset.assin = assin;
     if (!todas.length) { poe(box, h("p", { class: "hint" }, "Nenhuma conta cadastrada ainda.")); return; }
     poe(box, ...todas.map((x) => h("div", { class: "cfg-conta" },
       h("label", null, h("input", { type: "checkbox", id: "cfg-ativa-" + x.id, checked: x.ativa !== false, disabled: !S.canWrite,
-        onchange: (ev) => salvarConta(x.id, { ativa: ev.target.checked }) }), h("span", null, h("b", null, "@" + (x.username || "conta")), x.nome ? h("span", { class: "hint", style: "display:block" }, x.nome) : null)),
+        onchange: (ev) => salvarConta(x.id, { ativa: ev.target.checked }) }), h("span", null, h("b", null, "@" + (x.username || "conta")), x.semConexao ? h("span", { class: "hint", style: "display:block" }, "sem conexão com o Pipeboard") : x.nome ? h("span", { class: "hint", style: "display:block" }, x.nome) : null)),
       h("div", { class: "row", style: "gap:8px" },
         (() => { const sel = h("select", { id: "cfg-cliente-" + x.id, "aria-label": "Cliente de @" + (x.username || "conta"), disabled: !S.canWrite, style: "flex:1 1 160px",
           onchange: (ev) => salvarConta(x.id, { clienteId: ev.target.value || null }) }); opcoesClientes(sel, x.clienteId || "", "Sem cliente"); return sel; })(),
@@ -2577,7 +2588,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   }
   $("#pn-atualizar").addEventListener("click", async () => {
     if (S.pn.atualizando || !S.pn.mcp || !S.db) return;
-    const lista = contasEscopo(); if (!lista.length) return;
+    const lista = contasEscopo().filter((x) => !x.semConexao); if (!lista.length) return;
     S.pn.atualizando = true; const btn = $("#pn-atualizar"); btn.disabled = true;
     let certas = 0; let parou = null; const falhas = [];
     try {
@@ -2650,6 +2661,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     const contas = contasEscopo(); const com = contas.filter((c) => c.semana); const el = $("#in-kpis");
     const vazio = (titulo, texto) => { poe(el, h("div", { class: "empty", style: "grid-column:1/-1" }, h("strong", null, titulo), texto)); poe($("#in-fonte")); poe($("#in-quedas")); };
     if (!S.loaded.contas) return vazio("Carregando…", "Buscando os números das contas.");
+    if (contas.length && contas.every((c) => c.semConexao)) return vazio("Contas sem conexão", "As contas deste cliente não estão ligadas ao Pipeboard, então os números do Instagram não aparecem aqui.");
     if (!com.length) return vazio(contas.length ? "Sem números ainda" : "Nenhuma conta do Instagram aqui",
       contas.length ? "Toque em “Atualizar agora” no Desempenho." : "Ligue as contas aos clientes em Configurações.");
     const soma = (f) => { const v = com.map(f).filter(ehNum); return v.length ? v.reduce((a, b) => a + b, 0) : null; };
