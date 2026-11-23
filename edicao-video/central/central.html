@@ -26,6 +26,13 @@
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
   --font-video: "Montserrat", "Inter", system-ui, sans-serif;
   --radius: 10px;
+  /* Status dos posts do calendário (seguem as cores das etapas dos projetos, nos dois temas) */
+  --ps-ideia: var(--st-bruto);
+  --ps-roteiro: var(--st-storyboard);
+  --ps-producao: var(--st-editando);
+  --ps-pronto: var(--st-pronto);
+  --ps-agendado: var(--st-revisao);
+  --ps-publicado: var(--accent);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -55,9 +62,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; min-width: 0; }
 .brand small { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
 .brand h1 { font-size: 20px; }
-.tabs { display: flex; gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 999px; }
+.tabs { display: flex; gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 999px; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
 .tabs a { text-decoration: none; color: var(--muted); font-weight: 500; font-size: 14px; padding: 6px 14px; border-radius: 999px; white-space: nowrap; }
 .tabs a[aria-current="page"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 0.12); }
+@media (max-width: 520px) { .tabs { width: 100%; } .tabs a { flex: 1 0 auto; text-align: center; padding: 6px 9px; font-size: 13.5px; } }
 .me { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 .av { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; flex: none; background: var(--surface-2); }
 
@@ -78,7 +87,7 @@ main { padding-block: 22px 60px; }
 .btn[disabled] { opacity: 0.55; cursor: progress; }
 .field { display: grid; gap: 6px; min-width: 0; }
 .field > span { font-size: 13px; font-weight: 500; color: var(--muted); }
-.field input[type="text"], .field input[type="url"], .field select, .field textarea {
+.field input[type="text"], .field input[type="url"], .field input[type="date"], .field input[type="time"], .field input[type="search"], .field select, .field textarea {
   width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 9px 11px;
 }
 .field textarea { resize: vertical; min-height: 84px; }
@@ -210,6 +219,147 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .ref .tags { display: flex; flex-wrap: wrap; gap: 4px; }
 .ref a { color: var(--accent); font-size: 13px; overflow-wrap: anywhere; }
 
+/* Calendário — caixa de ideias à esquerda, mês à direita; no celular, caixa em cima e lista da semana */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.ic { width: 18px; height: 18px; flex: none; }
+.btn.icone { padding: 0; width: 36px; height: 36px; }
+.btn.embreve[disabled] { cursor: not-allowed; }
+.filtros { margin-bottom: 14px; }
+.filtros > summary { list-style: none; display: inline-flex; }
+.filtros > summary::-webkit-details-marker { display: none; }
+.filtros[open] > summary { margin-bottom: 10px; }
+@media (min-width: 721px) { .filtros > summary { display: none; } }
+.filtros-corpo { display: grid; gap: 10px; }
+.st-filtros, .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.stf { --c: var(--muted); display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 5px 12px 5px 10px; font-size: 13px; cursor: pointer; }
+.stf::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; }
+.stf.todos::before { display: none; }
+.stf b { font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stf[aria-pressed="true"] { border-color: var(--c); background: color-mix(in srgb, var(--c) 15%, var(--surface)); }
+.stf.todos[aria-pressed="true"] { border-color: var(--ink); background: var(--surface); }
+.sel-filtros { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sel-filtros select { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 10px; font-size: 13.5px; max-width: 100%; }
+.cal-layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 1000px) { .cal-layout { grid-template-columns: minmax(0, 1fr); } }
+.caixa { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+.caixa h3 { font-size: 16px; display: flex; align-items: baseline; gap: 8px; }
+.caixa h3 .mono { color: var(--muted); font-weight: 500; }
+.caixa.drop-alvo { box-shadow: 0 0 0 2px var(--accent); background: var(--accent-soft); }
+.rapida { display: flex; gap: 8px; }
+.rapida input { flex: 1 1 auto; min-width: 0; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 9px 12px; }
+.ideias { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+@media (max-width: 1000px) and (min-width: 721px) { .ideias { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); } }
+.vazio-cal { text-align: left; display: grid; gap: 6px; padding: 18px 16px; }
+.vazio-cal p { margin: 0; }
+.vazio-cal ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.pcard { --c: var(--ps-ideia); display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; align-items: start; padding: 10px 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--c); cursor: pointer; text-align: left; min-width: 0; }
+.caixa .pcard { background: var(--bg); }
+.pcard:hover { border-color: var(--muted); border-left-color: var(--c); }
+.pcard > .ic { color: var(--c); margin-top: 1px; }
+.pcard > b { font-weight: 600; font-size: 14.5px; line-height: 1.35; overflow-wrap: anywhere; }
+.pmeta { grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 12px; color: var(--muted); min-width: 0; }
+.pmeta .pill { font-size: 11px; padding: 1px 8px 1px 7px; }
+.cont { display: inline-flex; align-items: center; gap: 3px; }
+.cont .ic { width: 13px; height: 13px; }
+[draggable="true"] { cursor: grab; }
+.arrastando { opacity: 0.4; }
+.cal-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.cal-nav { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.cal-nav h3 { font-size: 19px; margin-left: 6px; min-width: 0; }
+.mes { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.dow { background: var(--surface-2); padding: 6px 8px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.dia { background: var(--surface); min-height: 112px; padding: 6px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.dia.fora { background: var(--bg); }
+.dia.fora .num { color: var(--muted); }
+.dia-topo { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.num { font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; min-width: 24px; height: 24px; padding: 0 5px; display: inline-grid; place-items: center; border-radius: 999px; }
+.dia.hoje .num { background: var(--accent); color: var(--accent-ink); }
+.mais { border: 0; background: transparent; color: var(--muted); width: 26px; height: 26px; border-radius: 6px; display: grid; place-items: center; cursor: pointer; padding: 0; opacity: 0; }
+.mais .ic { width: 16px; height: 16px; }
+.mais:hover { background: var(--surface-2); color: var(--ink); }
+.dia:hover .mais, .mais:focus-visible { opacity: 1; }
+@media (hover: none) { .mais { opacity: 1; } }
+.dia.drop-alvo { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); }
+.pc { --c: var(--ps-ideia); display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 5px; align-items: start; padding: 4px 6px 4px 5px; border-radius: 6px; background: color-mix(in srgb, var(--c) 14%, var(--surface)); border-left: 3px solid var(--c); font-size: 12.5px; line-height: 1.3; cursor: pointer; min-width: 0; }
+.pc:hover { background: color-mix(in srgb, var(--c) 24%, var(--surface)); }
+.pc > .ic { width: 14px; height: 14px; color: var(--c); margin-top: 1px; }
+.pc .tt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.pc > .hr { grid-column: 2; font-size: 10.5px; }
+.hr { font-family: var(--font-mono); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.semana { display: grid; gap: 8px; }
+.sdia { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 10px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.sdia.hoje { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.sdia-rot { display: grid; justify-items: center; align-content: start; }
+.sdia-rot small { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.sdia-rot b { font-family: var(--font-display); font-size: 22px; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.sdia.hoje .sdia-rot b { color: var(--accent); }
+.sdia-posts { display: grid; gap: 6px; min-width: 0; align-content: start; }
+.sdia-add { justify-self: start; display: inline-flex; align-items: center; gap: 4px; border: 0; background: transparent; color: var(--muted); font-size: 13px; padding: 4px 0; cursor: pointer; min-height: 32px; }
+.sdia-add .ic { width: 16px; height: 16px; }
+
+/* Ficha do post — gaveta à direita no computador, tela cheia no celular */
+html.trava { overflow: hidden; }
+dialog.ficha { margin: 0 0 0 auto; padding: 0; border: 0; width: min(580px, 100%); max-width: 100%; height: 100%; max-height: 100%; background: var(--surface); color: var(--ink); box-shadow: -12px 0 40px rgb(0 0 0 / 0.22); }
+dialog.ficha[open] { display: flex; flex-direction: column; }
+dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
+.ficha-top { display: flex; align-items: center; gap: 10px; padding-block: calc(10px + env(safe-area-inset-top, 0px)) 10px; padding-left: 18px; padding-right: max(14px, env(safe-area-inset-right, 0px)); border-bottom: 1px solid var(--line); }
+.ficha-estado { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-right: auto; min-width: 0; font-size: 13px; }
+.ficha-estado .ic { width: 20px; height: 20px; color: var(--c); }
+.ficha-estado b { font-family: var(--font-display); font-size: 17px; }
+#f-salvo { white-space: nowrap; }
+#f-salvo[data-kind="erro"] { color: var(--danger); }
+.ficha-corpo { flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain; display: grid; gap: 18px; align-content: start; padding-block: 18px calc(32px + env(safe-area-inset-bottom, 0px)); padding-left: 18px; padding-right: max(18px, env(safe-area-inset-right, 0px)); }
+@media (max-width: 720px) {
+  dialog.ficha { width: 100%; box-shadow: none; }
+  .ficha-top, .ficha-corpo { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .rapida input, .ficha input, .ficha textarea, .ficha select { font-size: 16px; }
+}
+.ficha[data-modo="novo"] .so-edicao, .ficha:not([data-modo="novo"]) .so-novo { display: none !important; }
+.datahora > .field:first-child { flex: 2 1 160px; }
+.datahora > .field:last-child { flex: 1 1 110px; }
+.ficha .field input#f-titulo { font-family: var(--font-display); font-size: 19px; font-weight: 700; }
+.f-sec { display: grid; gap: 10px; padding-top: 16px; border-top: 1px solid var(--line); min-width: 0; }
+.f-sec > .eyebrow { display: flex; gap: 6px; align-items: baseline; }
+.opc { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 12px; font-size: 13.5px; cursor: pointer; }
+.opc .ic { width: 16px; height: 16px; }
+.opc .av { width: 20px; height: 20px; }
+.opc[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.opc[disabled], .stf[disabled] { cursor: default; }
+.field > span.contagem { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-weight: 400; font-size: 12.5px; }
+#f-legenda-n { font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--muted); }
+#f-legenda-n[data-alerta] { color: var(--danger); font-weight: 500; }
+.field input[type="text"].tag-nova { border: 1px dashed var(--line); background: transparent; border-radius: 999px; padding: 6px 12px; font-size: 13.5px; width: 160px; max-width: 100%; }
+.link-acao { border: 0; background: none; padding: 2px 0; color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.link-acao:hover { color: var(--ink); }
+.proj-link { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px; border-radius: 8px; background: var(--bg); }
+.proj-link b { overflow-wrap: anywhere; min-width: 0; }
+.anexos { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.anexo { position: relative; margin: 0; aspect-ratio: 4 / 5; max-width: 100%; border-radius: 8px; overflow: hidden; background: var(--surface-2); display: grid; place-items: center; color: var(--muted); font-size: 12.5px; }
+.anexo img, .anexo video { width: 100%; height: 100%; object-fit: cover; background: #000; }
+.anexo .tirar { position: absolute; top: 5px; right: 5px; border: 0; border-radius: 999px; min-width: 28px; height: 28px; padding: 0 6px; display: grid; place-items: center; background: rgb(0 0 0 / 0.62); color: #fff; cursor: pointer; font-size: 12px; }
+.anexo .tirar .ic { width: 15px; height: 15px; }
+.fref, .bib-item { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px; border-radius: 8px; background: var(--bg); min-width: 0; }
+.bib-item { width: 100%; text-align: left; border: 1px solid transparent; cursor: pointer; }
+.bib-item[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.fref-mini { width: 42px; aspect-ratio: 9 / 16; max-width: 100%; border-radius: 5px; overflow: hidden; background: var(--surface-2); display: grid; place-items: center; color: var(--muted); }
+.fref-mini img, .fref-mini video { width: 100%; height: 100%; object-fit: cover; background: #000; }
+.fref-mini .ic { width: 16px; height: 16px; }
+.fref-tx { display: grid; gap: 1px; min-width: 0; }
+.fref-tx b { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+.fref-tx a { color: var(--accent); font-size: 12.5px; }
+.fref-tx .hint { overflow-wrap: anywhere; }
+.marca-sel { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; color: var(--accent-ink); }
+.bib-item[aria-pressed="true"] .marca-sel { background: var(--accent); border-color: var(--accent); }
+.marca-sel .ic { width: 14px; height: 14px; }
+.bib-lista { display: grid; gap: 6px; max-height: 320px; overflow-y: auto; }
+.sub { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.sub > summary { font-size: 14px; }
+.sub[open] > summary { margin-bottom: 10px; }
+.prog { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; justify-content: space-between; padding: 12px; border-radius: 8px; background: var(--bg); border: 1px dashed var(--line); }
+.prog > div { display: grid; gap: 2px; min-width: 0; flex: 1 1 220px; }
+.f-rodape { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 16px; border-top: 1px solid var(--line); }
+.f-rodape .hint { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
 .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 999px; font-size: 14px; z-index: 20; max-width: calc(100% - 32px); }
 </style>
 
@@ -218,6 +368,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
     <div class="brand"><small>Where2Go</small><h1>Central de Edição</h1></div>
     <nav class="tabs" aria-label="Seções">
       <a href="#projetos" data-tab="projetos">Projetos</a>
+      <a href="#calendario" data-tab="calendario">Calendário</a>
       <a href="#estilos" data-tab="estilos">Estilos</a>
       <a href="#referencias" data-tab="referencias">Referências</a>
     </nav>
@@ -262,6 +413,55 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
             </div>
           </form>
         </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- CALENDÁRIO -->
+  <section id="tab-calendario" data-section="calendario" hidden>
+    <div class="section-head">
+      <div>
+        <h2>Calendário</h2>
+        <p>As ideias de post da Where2Go, do rascunho ao publicado. Guarde a ideia na caixa, abra a ficha para escrever o roteiro e a legenda e leve o post para um dia do calendário.</p>
+      </div>
+    </div>
+    <details class="filtros" id="cal-filtros">
+      <summary class="btn">Filtros <span class="chip" id="cal-filtros-n" hidden></span></summary>
+      <div class="filtros-corpo">
+        <div class="st-filtros" id="cal-status" role="group" aria-label="Filtrar por status"></div>
+        <div class="sel-filtros">
+          <select id="fl-rede" aria-label="Filtrar por rede">
+            <option value="">Todas as redes</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option>
+          </select>
+          <select id="fl-formato" aria-label="Filtrar por formato">
+            <option value="">Todos os formatos</option><option value="reels">Reels</option><option value="carrossel">Carrossel</option><option value="story">Story</option><option value="post">Post</option><option value="tiktok">TikTok</option><option value="_">Sem formato</option>
+          </select>
+          <select id="fl-resp" aria-label="Filtrar por responsável"><option value="">Todos os responsáveis</option></select>
+          <button class="btn ghost" type="button" id="fl-limpar" hidden>Limpar filtros</button>
+          <span class="hint" id="fl-info"></span>
+        </div>
+      </div>
+    </details>
+    <div class="cal-layout">
+      <aside class="panel caixa" id="caixa" aria-labelledby="caixa-titulo">
+        <h3 id="caixa-titulo">Caixa de ideias <span class="mono" id="ideias-n"></span></h3>
+        <form class="rapida" id="form-ideia">
+          <input type="text" id="ideia-titulo" maxlength="140" placeholder="Nova ideia de post…" aria-label="Título da nova ideia" autocomplete="off" enterkeyhint="done">
+          <button class="btn primary" type="submit" id="ideia-add">Guardar</button>
+        </form>
+        <div class="ideias" id="ideias"></div>
+      </aside>
+      <div class="stack" style="gap:10px;min-width:0">
+        <div class="cal-head">
+          <div class="cal-nav">
+            <button class="btn icone" type="button" id="cal-ant" aria-label="Mês anterior"></button>
+            <button class="btn" type="button" id="cal-hoje">Hoje</button>
+            <button class="btn icone" type="button" id="cal-prox" aria-label="Próximo mês"></button>
+            <h3 id="cal-titulo" aria-live="polite"></h3>
+          </div>
+          <p class="hint" id="cal-dica"></p>
+        </div>
+        <div id="cal-grade" class="mes"></div>
       </div>
     </div>
   </section>
@@ -358,6 +558,93 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 </main>
 <div class="toast" id="toast" role="status" hidden></div>
 
+<!-- FICHA DO POST -->
+<dialog class="ficha" id="ficha" aria-label="Ficha do post">
+  <header class="ficha-top">
+    <div class="ficha-estado" id="f-estado"></div>
+    <span class="hint" id="f-salvo" role="status"></span>
+    <button class="btn icone ghost" type="button" id="f-fechar" aria-label="Fechar ficha"></button>
+  </header>
+  <div class="ficha-corpo" id="f-corpo">
+    <label class="field"><span>Título</span><input type="text" id="f-titulo" maxlength="140" placeholder="Ex.: 3 praias secretas perto de SP" autocomplete="off" enterkeyhint="done"></label>
+    <div class="field so-edicao"><span>Status</span><div class="chips" id="f-status" role="group" aria-label="Status do post"></div></div>
+    <div class="row datahora">
+      <label class="field"><span>Data</span><input type="date" id="f-data"></label>
+      <label class="field"><span>Hora</span><input type="time" id="f-hora"></label>
+    </div>
+    <div class="so-edicao" style="margin-top:-10px"><button class="link-acao" type="button" id="f-sem-data">Tirar a data e voltar pra caixa de ideias</button></div>
+    <div class="field"><span>Formato</span><div class="chips" id="f-formato" role="group" aria-label="Formato"></div></div>
+    <div class="row so-novo"><button class="btn primary" type="button" id="f-criar">Criar post</button><button class="btn" type="button" id="f-cancelar">Cancelar</button></div>
+    <div class="field so-edicao"><span>Redes</span><div class="chips" id="f-redes" role="group" aria-label="Redes"></div></div>
+    <div class="field so-edicao"><span>Responsável</span>
+      <div class="row" style="align-items:center;gap:8px">
+        <select id="f-resp" aria-label="Responsável" style="flex:1 1 200px;width:auto"></select>
+        <button class="btn ghost" type="button" id="f-resp-eu">Assumir</button>
+      </div>
+      <details id="f-resp-outro"><summary class="hint">Procurar outra pessoa do time</summary>
+        <div class="stack" style="gap:8px;margin-top:8px">
+          <input type="search" id="f-resp-busca" placeholder="Nome ou e-mail" aria-label="Procurar pessoa" autocomplete="off" style="border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 11px">
+          <div class="chips" id="f-resp-res"></div>
+        </div>
+      </details>
+    </div>
+    <div class="field so-edicao"><span>Tags</span>
+      <div class="chips" id="f-tags" role="group" aria-label="Tags"></div>
+      <input type="text" class="tag-nova" id="f-tag-nova" maxlength="24" placeholder="+ nova tag" aria-label="Nova tag" autocomplete="off" enterkeyhint="done">
+    </div>
+    <label class="field so-edicao"><span>Ideia / roteiro</span><textarea id="f-ideia" rows="5" maxlength="10000" placeholder="Gancho, o que mostrar, falas, cenas, CTA…"></textarea></label>
+    <label class="field so-edicao"><span>Legenda</span><textarea id="f-legenda" rows="6" maxlength="5000" placeholder="O texto que vai no post, com as hashtags."></textarea>
+      <span class="contagem"><span id="f-legenda-hash">As primeiras linhas aparecem antes do “mais”.</span><span id="f-legenda-n">0 / 2.200</span></span></label>
+    <section class="f-sec so-edicao" id="f-projeto" aria-label="Projeto de vídeo"></section>
+    <section class="f-sec so-edicao" aria-label="Anexos">
+      <span class="eyebrow">Anexos</span>
+      <div class="anexos" id="f-anexos"></div>
+      <p class="hint" id="f-anexos-vazio">Fotos, vídeos e artes do post.</p>
+      <div class="row" style="align-items:center">
+        <label class="btn" id="f-anexo-btn">Adicionar imagem ou vídeo<input type="file" id="f-anexo-arq" class="sr-only" multiple accept="image/*,video/*"></label>
+        <span class="hint" id="f-anexo-hint">Até 20 MB por arquivo.</span>
+      </div>
+    </section>
+    <section class="f-sec so-edicao" aria-label="Referências">
+      <span class="eyebrow">Referências</span>
+      <div class="stack" style="gap:6px" id="f-refs"></div>
+      <details class="sub" id="f-ref-bib"><summary>Escolher da biblioteca <span class="mono" id="f-ref-bib-n"></span></summary>
+        <div class="stack" style="gap:8px">
+          <input type="search" id="f-ref-busca" placeholder="Buscar por título, criador ou tag" aria-label="Buscar referência" autocomplete="off" style="border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 11px">
+          <div class="bib-lista" id="f-ref-lista"></div>
+        </div>
+      </details>
+      <details class="sub" id="f-ref-nova"><summary>Enviar nova referência</summary>
+        <form class="stack" id="form-f-ref">
+          <label class="field"><span>Título</span><input type="text" id="fr-titulo" maxlength="140" placeholder="Ex.: Roteiro de 3 dias em Paraty"></label>
+          <label class="field"><span id="fr-arquivo-rot">Vídeo ou imagem (até 20 MB)</span><input type="file" id="fr-arquivo" accept="video/mp4,video/webm,video/quicktime,image/png,image/jpeg,image/webp"></label>
+          <label class="field"><span>Link (opcional)</span><input type="url" id="fr-link" placeholder="https://www.instagram.com/reel/…"></label>
+          <label class="field"><span>O que copiar</span><textarea id="fr-notas" rows="2" maxlength="4000" placeholder="Ex.: o gancho nos 2 primeiros segundos"></textarea></label>
+          <p class="hint">A referência também entra na biblioteca da aba Referências.</p>
+          <div class="row"><button class="btn primary" type="submit" id="fr-salvar">Enviar referência</button></div>
+        </form>
+      </details>
+    </section>
+    <section class="f-sec so-edicao" aria-label="Publicação">
+      <span class="eyebrow">Publicação</span>
+      <div class="prog">
+        <div><b id="f-ag-status">Não programado</b><span class="hint">Em breve a Central vai publicar o post no Instagram e no Facebook na data e hora marcadas.</span></div>
+        <button class="btn embreve" type="button" id="f-programar" disabled>Programar publicação <span class="chip">em breve</span></button>
+      </div>
+    </section>
+    <section class="f-sec so-edicao" aria-label="Comentários">
+      <span class="eyebrow">Comentários <span id="f-coments-n"></span></span>
+      <ul class="notes" id="f-coments"></ul>
+      <form class="stack" id="form-coment" style="gap:8px">
+        <label class="field"><span class="sr-only">Comentário</span><textarea id="f-coment" rows="2" maxlength="2000" placeholder="Escreva um comentário pro time…"></textarea></label>
+        <div class="row" style="justify-content:flex-end"><button class="btn primary" type="submit" id="f-coment-enviar">Comentar</button></div>
+      </form>
+    </section>
+    <footer class="f-rodape so-edicao"><span class="hint" id="f-criado"></span><button class="btn danger ghost" type="button" id="f-excluir">Excluir post</button></footer>
+  </div>
+  <div class="toast" id="f-toast" role="status" hidden></div>
+</dialog>
+
 <script>
 (() => {
   "use strict";
@@ -374,10 +661,13 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 
   const S = {
     db: null, assets: null, user: null, myId: null, canWrite: true,
-    estilos: [], refs: [], projetos: [], notas: [],
-    loaded: { estilos: false, referencias: false, projetos: false },
+    estilos: [], refs: [], projetos: [], notas: [], posts: [],
+    loaded: { estilos: false, referencias: false, projetos: false, posts: false },
     filtro: null, aberto: null, unsubNotas: null,
     estiloSel: null, rascunho: null, modo: "rosto",
+    // Calendário: ref = dia de referência do mês (ou da semana, no celular) que está na tela
+    cal: { ref: new Date(), filtros: { rede: "", formato: "", resp: "", status: "" }, todasIdeias: false, arrastando: null, renderPendente: false },
+    ficha: null, pessoasExtras: new Set(),
   };
 
   // ---------- utilidades ----------
@@ -416,7 +706,11 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
   }
   let toastT;
   function toast(msg) {
-    const t = $("#toast"); t.textContent = msg; t.hidden = false;
+    // Com a ficha aberta (camada de cima), o aviso precisa aparecer dentro dela.
+    const dentro = $("#ficha").open;
+    const t = dentro ? $("#f-toast") : $("#toast");
+    (dentro ? $("#toast") : $("#f-toast")).hidden = true;
+    t.textContent = msg; t.hidden = false;
     clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2600);
   }
   function banner(msg, kind) {
@@ -467,7 +761,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
   }
 
   // ---------- abas ----------
-  const ABAS = ["projetos", "estilos", "referencias"];
+  const ABAS = ["projetos", "calendario", "estilos", "referencias"];
   function mostrarAba() {
     const aba = ABAS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "projetos";
     for (const a of ABAS) $("#tab-" + a).hidden = a !== aba;
@@ -591,6 +885,13 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
     } }, "Copiar pedido pro Claude"));
     body.append(acoes, caixa);
 
+    // Post do calendário ligado a este projeto
+    const postLigado = p.postId ? S.posts.find((x) => x.id === p.postId) : null;
+    if (postLigado) body.append(h("div", { class: "row", style: "align-items:center;gap:6px 10px" },
+      h("span", { class: "eyebrow" }, "Post do calendário"),
+      h("button", { class: "btn", type: "button", onclick: () => { location.hash = "calendario"; mostrarAba(); abrirFicha(postLigado.id); } },
+        icone(postLigado.formato || "nenhum"), (postLigado.titulo || "Sem título") + " · " + (postLigado.data ? dataCurta(postLigado.data) : "sem data"))));
+
     if (p.briefing) body.append(h("div", { class: "stack", style: "gap:4px" }, h("span", { class: "eyebrow" }, "Briefing"), h("p", { style: "margin:0;white-space:pre-wrap;overflow-wrap:anywhere" }, p.briefing)));
 
     // Storyboard
@@ -647,6 +948,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
           h("button", { class: "btn danger", type: "button", onclick: (ev) => salvando(ev.currentTarget, async () => {
             for (const n of S.notas) await S.db.doc(`projetos/${p.id}/notas/${n.id}`).delete();
             if (S.assets) for (const v of p.versoes || []) { try { await S.assets.delete(v.arquivo); } catch (e) { console.warn(e); } }
+            if (p.postId && S.posts.some((x) => x.id === p.postId)) await salvarPost(p.postId, { projetoId: null });
             await S.db.doc(`projetos/${p.id}`).delete();
             S.aberto = null; toast("Projeto excluído");
           }) }, "Confirmar exclusão")));
@@ -856,11 +1158,759 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
     if (ok) { $("#form-ref").reset(); toast("Referência adicionada"); }
   });
 
+  // ---------- CALENDÁRIO ----------
+  const PSTATUS = [
+    { id: "ideia", nome: "Ideia" },
+    { id: "roteiro", nome: "Roteiro" },
+    { id: "producao", nome: "Produção" },
+    { id: "pronto", nome: "Pronto" },
+    { id: "agendado", nome: "Agendado" },
+    { id: "publicado", nome: "Publicado" },
+  ];
+  const FORMATOS = [
+    { id: "reels", nome: "Reels", video: true },
+    { id: "carrossel", nome: "Carrossel" },
+    { id: "story", nome: "Story" },
+    { id: "post", nome: "Post" },
+    { id: "tiktok", nome: "TikTok", video: true },
+  ];
+  const REDES = [{ id: "instagram", nome: "Instagram", curto: "IG" }, { id: "tiktok", nome: "TikTok", curto: "TT" }];
+  const TAGS_SUGERIDAS = ["destino", "dica", "bastidores", "promoção"];
+  const LIMITE_LEGENDA = 2200; // limite de caracteres da legenda no Instagram
+  const AGENDAMENTO_VAZIO = { status: "nao_agendado", plataforma: null, idExterno: null, publicadoEm: null };
+  const ROTULO_AGENDAMENTO = { nao_agendado: "Não programado", agendado: "Programado", publicado: "Publicado", erro: "Erro ao publicar" };
+  const mqCel = window.matchMedia("(max-width: 720px)");
+  const mqMouse = window.matchMedia("(hover: hover) and (pointer: fine)");
+  const nf = new Intl.NumberFormat("pt-BR");
+
+  const ICONES = {
+    reels: '<rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><path d="M10 8.6v6.8l5.6-3.4z" fill="currentColor" stroke="none"/>',
+    carrossel: '<rect x="8" y="4" width="12" height="16" rx="2"/><path d="M4.5 6.5v11"/>',
+    story: '<circle cx="12" cy="12" r="8.5" stroke-dasharray="3.6 2.4"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>',
+    post: '<rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><path d="M3.5 16.5l5-4.5 4 3.5 3-2.5 5 4"/><circle cx="15.5" cy="8.5" r="1.4"/>',
+    tiktok: '<circle cx="7.5" cy="17" r="3"/><path d="M10.5 17V4.5c.7 2.6 2.8 4.3 5.8 4.6"/>',
+    nenhum: '<path d="M9.5 18h5M10.5 21h3"/><path d="M12 3.5a5.5 5.5 0 0 0-3.3 9.9v2.1h6.6v-2.1A5.5 5.5 0 0 0 12 3.5z"/>',
+    mais: '<path d="M12 5v14M5 12h14"/>',
+    esq: '<path d="M14.5 5.5L8 12l6.5 6.5"/>',
+    dir: '<path d="M9.5 5.5L16 12l-6.5 6.5"/>',
+    fechar: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
+    check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    clipe: '<path d="M8.5 12.5l6-6a3 3 0 0 1 4.2 4.2l-7.7 7.7a4.6 4.6 0 0 1-6.5-6.5l7-7"/>',
+    ref: '<path d="M7 4h10v16l-5-3.6L7 20z"/>',
+    filme: '<rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M3.5 9.5h17M8 5.5v4M16 5.5v4"/>',
+    link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  };
+  function icone(nome) {
+    const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    for (const [k, v] of Object.entries({ viewBox: "0 0 24 24", "aria-hidden": "true", class: "ic", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linecap": "round", "stroke-linejoin": "round" })) s.setAttribute(k, v);
+    s.innerHTML = ICONES[nome] || ICONES.nenhum; // marcação fixa da página, nunca texto do time
+    return s;
+  }
+
+  // Datas no fuso de quem está vendo. No banco: "AAAA-MM-DD" e "HH:MM".
+  const pad = (n) => String(n).padStart(2, "0");
+  const isoDia = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  function deIso(s) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ""); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
+  const somaDias = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  const inicioSemana = (d) => somaDias(d, -d.getDay()); // semana começa no domingo
+  const capitaliza = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const DIAS_SEMANA = Array.from({ length: 7 }, (_, i) => new Date(2026, 10, 1 + i).toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", ""));
+  function dataCurta(s) { const d = deIso(s); return d ? d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }).replace(".", "") : ""; }
+  function dataLonga(s) { const d = deIso(s); return d ? d.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }) : ""; }
+  function rotuloSemana(a, b) {
+    const mes = (d, tipo) => d.toLocaleDateString("pt-BR", { month: tipo }).replace(".", "");
+    if (a.getMonth() === b.getMonth()) return `${a.getDate()} a ${b.getDate()} de ${mes(b, "long")}`;
+    return `${a.getDate()} de ${mes(a, "short")} a ${b.getDate()} de ${mes(b, "short")}`;
+  }
+
+  const statusPost = (id) => PSTATUS.find((s) => s.id === id) || PSTATUS[0];
+  const formatoDe = (id) => FORMATOS.find((f) => f.id === id) || null;
+  const postPorId = (id) => S.posts.find((p) => p.id === id);
+  const redePadrao = (fmt) => (fmt === "tiktok" ? "tiktok" : "instagram");
+  function pillPost(status) { const st = statusPost(status); return h("span", { class: "pill", style: `--c: var(--ps-${st.id})` }, st.nome); }
+  const podeArrastar = () => S.canWrite && !!S.db && mqMouse.matches;
+
+  // ----- Gravação: uma escrita por vez em cada documento, juntando o que chega no meio -----
+  const filas = new Map();
+  function fila(path) { let f = filas.get(path); if (!f) { f = { pend: null, t: null, cadeia: Promise.resolve() }; filas.set(path, f); } return f; }
+  function emFila(path, fn) { const f = fila(path); const p = f.cadeia.then(fn); f.cadeia = p.catch(() => {}); return p; }
+  function descarregar(path) {
+    const f = fila(path); clearTimeout(f.t); f.t = null;
+    return emFila(path, async () => {
+      const patch = f.pend; f.pend = null;
+      if (!patch) return;
+      await S.db.doc(path).update({ ...patch, atualizadoEm: agora() });
+    });
+  }
+  // Rejeita se não salvar (para quem precisa saber).
+  function gravarPost(id, campos) {
+    const f = fila("posts/" + id); f.pend = { ...(f.pend || {}), ...campos };
+    return descarregar("posts/" + id);
+  }
+  function falhou(e) { console.error(e); toast(erroMsg(e)); indicador("erro"); }
+  // Junta mudanças e grava; com atraso, espera a pessoa parar de digitar. Nunca rejeita.
+  function salvarPost(id, campos, atraso = 0) {
+    if (!S.db) { toast("Abra a Central no claude.ai para salvar."); return Promise.resolve(false); }
+    const path = "posts/" + id; const f = fila(path);
+    f.pend = { ...(f.pend || {}), ...campos };
+    clearTimeout(f.t); f.t = null;
+    indicador("salvando");
+    if (atraso > 0) { f.t = setTimeout(() => { descarregar(path).then(() => indicador("salvo"), falhou); }, atraso); return Promise.resolve(true); }
+    return descarregar(path).then(() => { indicador("salvo"); return true; }, (e) => { falhou(e); return false; });
+  }
+  function valorAtual(p, k) { const f = filas.get("posts/" + p.id); return f && f.pend && k in f.pend ? f.pend[k] : p[k]; }
+  // "salvando" | "salvo" | "erro"; sem argumento só atualiza o que já está escrito.
+  function indicador(estado) {
+    const el = $("#f-salvo"); const ficha = S.ficha;
+    if (!ficha || !ficha.id) { el.textContent = ""; return; }
+    if (estado === "erro") { el.textContent = "Não salvou"; el.dataset.kind = "erro"; return; }
+    const f = filas.get("posts/" + ficha.id);
+    const pendente = !!(f && (f.pend || f.t));
+    if (estado === "salvando" || pendente) { el.textContent = "Salvando…"; el.dataset.kind = ""; return; }
+    if (estado === "salvo" || el.textContent === "Salvando…") { el.textContent = "Salvo"; el.dataset.kind = ""; }
+  }
+  async function criarPost(campos) {
+    const ref = await S.db.collection("posts").add({
+      titulo: "", ideia: "", legenda: "", formato: null, redes: [], data: null, hora: null, status: "ideia",
+      responsavel: null, tags: [], anexos: [], referencias: [], projetoId: null, agendamento: { ...AGENDAMENTO_VAZIO },
+      criadoPor: S.myId, criadoEm: agora(), atualizadoEm: agora(), ...campos,
+    });
+    return ref.id;
+  }
+
+  // ----- Pessoas do time (só ids no banco; nomes vêm do perfil) -----
+  function idsTime() {
+    const s = new Set();
+    if (S.myId) s.add(S.myId);
+    for (const p of S.posts) { if (p.responsavel) s.add(p.responsavel); if (p.criadoPor) s.add(p.criadoPor); }
+    for (const p of S.projetos) { if (p.responsavel) s.add(p.responsavel); if (p.criadoPor) s.add(p.criadoPor); }
+    for (const r of S.refs) if (r.adicionadoPor) s.add(r.adicionadoPor);
+    for (const e of S.estilos) if (e.atualizadoPor) s.add(e.atualizadoPor);
+    for (const id of S.pessoasExtras) s.add(id);
+    return [...s].filter((x) => typeof x === "string");
+  }
+  const nomePessoa = (p) => (!p ? "Pessoa do time" : p.isMe ? `${p.name || "Você"} (você)` : (p.name || "Alguém do time"));
+  async function opcoesPessoas(sel, obterValor, fixas) {
+    const ids = idsTime(); const v0 = obterValor();
+    if (v0 && !ids.includes(v0) && !fixas.some(([x]) => x === v0)) ids.push(v0);
+    const ps = S.user ? await S.user.profiles(ids) : {};
+    ids.sort((a, b) => ((ps[b] && ps[b].isMe) ? 1 : 0) - ((ps[a] && ps[a].isMe) ? 1 : 0) || nomePessoa(ps[a]).localeCompare(nomePessoa(ps[b]), "pt-BR"));
+    const itens = [...fixas, ...ids.map((id) => [id, nomePessoa(ps[id])])];
+    const assin = JSON.stringify(itens);
+    if (sel.dataset.assin !== assin) { sel.replaceChildren(...itens.map(([v, t]) => h("option", { value: v }, t))); sel.dataset.assin = assin; }
+    if (document.activeElement !== sel) sel.value = obterValor() || "";
+  }
+
+  // ----- Filtros -----
+  function filtrosAtivos() { const f = S.cal.filtros; return [f.rede, f.formato, f.resp, f.status].filter(Boolean).length; }
+  function passa(p, semStatus) {
+    const f = S.cal.filtros;
+    if (f.rede && !(p.redes || []).includes(f.rede)) return false;
+    if (f.formato && (f.formato === "_" ? !!p.formato : p.formato !== f.formato)) return false;
+    if (f.resp && (f.resp === "_" ? !!p.responsavel : p.responsavel !== f.resp)) return false;
+    if (!semStatus && f.status && statusPost(p.status).id !== f.status) return false;
+    return true;
+  }
+  const postsFiltrados = () => S.posts.filter((p) => passa(p, false));
+  function renderFiltros() {
+    const f = S.cal.filtros;
+    const base = S.posts.filter((p) => passa(p, true));
+    $("#cal-status").replaceChildren(
+      h("button", { class: "stf todos", type: "button", "aria-pressed": String(!f.status), onclick: () => { f.status = ""; renderCalendario(); } }, "Todos ", h("b", null, base.length)),
+      ...PSTATUS.map((st) => h("button", { class: "stf", type: "button", style: `--c: var(--ps-${st.id})`, "aria-pressed": String(f.status === st.id),
+        onclick: () => { f.status = f.status === st.id ? "" : st.id; renderCalendario(); } }, st.nome + " ", h("b", null, base.filter((p) => statusPost(p.status).id === st.id).length))));
+    $("#fl-rede").value = f.rede; $("#fl-formato").value = f.formato;
+    opcoesPessoas($("#fl-resp"), () => S.cal.filtros.resp, [["", "Todos os responsáveis"], ["_", "Sem responsável"]]);
+    const n = filtrosAtivos();
+    $("#fl-limpar").hidden = !n; $("#cal-filtros-n").hidden = !n; $("#cal-filtros-n").textContent = String(n);
+    $("#fl-info").textContent = n ? `${postsFiltrados().length} de ${S.posts.length} posts` : "";
+  }
+
+  // ----- Cartões -----
+  function rotuloPost(p) {
+    const st = statusPost(p.status); const fmt = formatoDe(p.formato);
+    return [p.hora, p.titulo || "Sem título", st.nome, fmt && fmt.nome].filter(Boolean).join(", ");
+  }
+  function cartaoPost(p, comHora) {
+    const st = statusPost(p.status);
+    const nAnexos = (p.anexos || []).length, nRefs = (p.referencias || []).length;
+    const redes = (p.redes || []).map((r) => (REDES.find((x) => x.id === r) || {}).curto).filter(Boolean).join(" · ");
+    return h("div", { class: "pcard", role: "button", tabindex: "0", "data-id": p.id, style: `--c: var(--ps-${st.id})`, draggable: podeArrastar() ? "true" : null, "aria-label": rotuloPost(p) },
+      icone(p.formato || "nenhum"),
+      h("b", null, p.titulo || "Sem título"),
+      h("div", { class: "pmeta" },
+        comHora && p.hora ? h("span", { class: "hr" }, p.hora) : null,
+        pillPost(p.status),
+        redes ? h("span", { class: "mono" }, redes) : null,
+        (p.tags || []).slice(0, 2).map((t) => h("span", { class: "chip" }, t)),
+        nAnexos ? h("span", { class: "cont", title: "Anexos" }, icone("clipe"), nAnexos) : null,
+        nRefs ? h("span", { class: "cont", title: "Referências" }, icone("ref"), nRefs) : null,
+        p.projetoId ? h("span", { class: "cont", title: "Virou projeto de vídeo" }, icone("filme"), "projeto") : null,
+        p.responsavel ? pessoa(p.responsavel, false) : null));
+  }
+  function chipPost(p) {
+    const st = statusPost(p.status); const fmt = formatoDe(p.formato);
+    return h("div", { class: "pc", role: "button", tabindex: "0", "data-id": p.id, style: `--c: var(--ps-${st.id})`, draggable: podeArrastar() ? "true" : null,
+      title: [p.titulo || "Sem título", st.nome, fmt && fmt.nome].filter(Boolean).join(" · "), "aria-label": rotuloPost(p) },
+      icone(p.formato || "nenhum"),
+      h("span", { class: "tt" }, p.titulo || "Sem título"),
+      p.hora ? h("span", { class: "hr" }, p.hora) : null);
+  }
+  const ordemDia = (a, b) => (a.hora || "99").localeCompare(b.hora || "99") || (a.titulo || "").localeCompare(b.titulo || "", "pt-BR");
+  function porDia(lista) {
+    const m = new Map();
+    for (const p of lista) { if (!deIso(p.data)) continue; if (!m.has(p.data)) m.set(p.data, []); m.get(p.data).push(p); }
+    for (const l of m.values()) l.sort(ordemDia);
+    return m;
+  }
+
+  // ----- Caixa de ideias -----
+  function vazioCalendario() {
+    if (!S.canWrite) return h("div", { class: "empty" }, h("strong", null, "Nenhum post ainda"), "Quando o time guardar ideias de post, elas aparecem aqui.");
+    return h("div", { class: "empty vazio-cal" },
+      h("strong", null, "Nenhuma ideia ainda"),
+      h("ol", null,
+        h("li", null, "Escreva a primeira ideia no campo acima e toque em Guardar. Só o título basta."),
+        h("li", null, "Toque na ideia para abrir a ficha: roteiro, legenda, formato, anexos e referências."),
+        h("li", null, mqMouse.matches ? "Arraste a ideia até um dia do calendário para marcar a data." : "Escolha a data na ficha, ou toque no + de um dia para criar um post já com data.")));
+  }
+  function renderCaixa(vis) {
+    const el = $("#ideias"); el.replaceChildren();
+    const ideias = vis.filter((p) => !deIso(p.data)).sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
+    const total = S.posts.filter((p) => !deIso(p.data)).length;
+    $("#ideias-n").textContent = S.loaded.posts && S.posts.length ? (filtrosAtivos() ? `${ideias.length} de ${total}` : String(total)) : "";
+    $("#form-ideia").hidden = !S.canWrite;
+    if (!S.loaded.posts) { el.append(h("div", { class: "empty" }, h("strong", null, "Carregando ideias…"), "Buscando o calendário da equipe.")); return; }
+    if (!S.posts.length) { el.append(vazioCalendario()); return; }
+    if (!ideias.length) { el.append(h("p", { class: "hint" }, filtrosAtivos() ? "Nenhuma ideia sem data com esses filtros." : "Todas as ideias já têm data. Guarde a próxima no campo acima.")); return; }
+    const limite = mqCel.matches && !S.cal.todasIdeias ? 4 : Infinity;
+    for (const p of ideias.slice(0, limite)) el.append(cartaoPost(p, false));
+    if (ideias.length > limite) el.append(h("button", { class: "btn ghost", type: "button", onclick: () => { S.cal.todasIdeias = true; renderCalendario(); } }, `Ver todas as ${ideias.length} ideias`));
+    resolverPessoas(el);
+  }
+  $("#form-ideia").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    if (!S.db) return toast("Abra a Central no claude.ai para salvar.");
+    const titulo = $("#ideia-titulo").value.trim(); if (!titulo) return;
+    const ok = await salvando($("#ideia-add"), () => criarPost({ titulo }));
+    if (ok) { $("#ideia-titulo").value = ""; $("#ideia-titulo").focus(); toast(filtrosAtivos() ? "Ideia guardada (os filtros podem escondê-la)" : "Ideia guardada"); }
+  });
+
+  // ----- Mês (computador) e semana (celular) -----
+  function botaoNovo(dia, cls, rotulo) {
+    if (!S.canWrite || !S.db) return null;
+    return h("button", { class: cls, type: "button", "data-novo": dia, "aria-label": `Novo post em ${dataCurta(dia)}` }, icone("mais"), rotulo || null);
+  }
+  function renderMes(vis) {
+    const ref = S.cal.ref; const hoje = isoDia(new Date());
+    const ini = inicioSemana(new Date(ref.getFullYear(), ref.getMonth(), 1));
+    const fim = somaDias(inicioSemana(new Date(ref.getFullYear(), ref.getMonth() + 1, 0)), 6);
+    $("#cal-titulo").textContent = capitaliza(ref.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }));
+    $("#cal-ant").setAttribute("aria-label", "Mês anterior"); $("#cal-prox").setAttribute("aria-label", "Próximo mês");
+    $("#cal-dica").textContent = podeArrastar() ? "Arraste os posts para mudar a data. Clique num post para abrir a ficha." : "Toque num post para abrir a ficha.";
+    const mapa = porDia(vis);
+    const grade = $("#cal-grade"); grade.className = "mes";
+    grade.replaceChildren(...DIAS_SEMANA.map((d) => h("div", { class: "dow", "aria-hidden": "true" }, d)));
+    for (let d = ini; d <= fim; d = somaDias(d, 1)) {
+      const k = isoDia(d); const posts = mapa.get(k) || [];
+      grade.append(h("div", { class: "dia" + (d.getMonth() !== ref.getMonth() ? " fora" : "") + (k === hoje ? " hoje" : ""), "data-dia": k, role: "group",
+        "aria-label": dataLonga(k) + (posts.length ? `, ${posts.length} ${posts.length === 1 ? "post" : "posts"}` : "") },
+        h("div", { class: "dia-topo" }, h("span", { class: "num" }, d.getDate()), botaoNovo(k, "mais")),
+        posts.map(chipPost)));
+    }
+  }
+  function renderSemana(vis) {
+    const ini = inicioSemana(S.cal.ref); const fim = somaDias(ini, 6); const hoje = isoDia(new Date());
+    $("#cal-titulo").textContent = rotuloSemana(ini, fim);
+    $("#cal-ant").setAttribute("aria-label", "Semana anterior"); $("#cal-prox").setAttribute("aria-label", "Próxima semana");
+    $("#cal-dica").textContent = S.canWrite && S.db ? "Toque no + de um dia para criar um post com data." : "";
+    const mapa = porDia(vis);
+    const grade = $("#cal-grade"); grade.className = "semana"; grade.replaceChildren();
+    for (let i = 0; i < 7; i++) {
+      const d = somaDias(ini, i); const k = isoDia(d); const posts = mapa.get(k) || [];
+      grade.append(h("div", { class: "sdia" + (k === hoje ? " hoje" : ""), "data-dia": k, role: "group", "aria-label": dataLonga(k) },
+        h("div", { class: "sdia-rot", "aria-hidden": "true" }, h("small", null, DIAS_SEMANA[d.getDay()]), h("b", null, d.getDate())),
+        h("div", { class: "sdia-posts" }, posts.map((p) => cartaoPost(p, true)),
+          botaoNovo(k, "sdia-add", posts.length ? "Outro post" : "Adicionar post"),
+          !posts.length && !(S.canWrite && S.db) ? h("span", { class: "hint" }, "Nada marcado") : null)));
+    }
+    resolverPessoas(grade);
+  }
+  function renderCalendario() {
+    if (S.cal.arrastando) { S.cal.renderPendente = true; return; }
+    S.cal.renderPendente = false;
+    renderFiltros();
+    const vis = postsFiltrados();
+    renderCaixa(vis);
+    if (mqCel.matches) renderSemana(vis); else renderMes(vis);
+    if (S.ficha) atualizarFicha();
+  }
+  function navegar(passo) {
+    const r = S.cal.ref;
+    S.cal.ref = mqCel.matches ? somaDias(r, 7 * passo) : new Date(r.getFullYear(), r.getMonth() + passo, 1);
+    renderCalendario();
+  }
+  $("#cal-ant").append(icone("esq")); $("#cal-prox").append(icone("dir")); $("#f-fechar").append(icone("fechar"));
+  $("#cal-ant").addEventListener("click", () => navegar(-1));
+  $("#cal-prox").addEventListener("click", () => navegar(1));
+  $("#cal-hoje").addEventListener("click", () => { S.cal.ref = new Date(); renderCalendario(); });
+  mqCel.addEventListener("change", () => { $("#cal-filtros").open = !mqCel.matches; renderCalendario(); });
+  mqMouse.addEventListener("change", () => renderCalendario());
+  for (const [sel, chave] of [["#fl-rede", "rede"], ["#fl-formato", "formato"], ["#fl-resp", "resp"]])
+    $(sel).addEventListener("change", (ev) => { S.cal.filtros[chave] = ev.target.value; renderCalendario(); });
+  $("#fl-limpar").addEventListener("click", () => { Object.assign(S.cal.filtros, { rede: "", formato: "", resp: "", status: "" }); renderCalendario(); });
+
+  // Abrir ficha e criar post num dia
+  $("#tab-calendario").addEventListener("click", (ev) => {
+    const novo = ev.target.closest("[data-novo]"); if (novo) { novaFicha(novo.dataset.novo); return; }
+    const c = ev.target.closest("[data-id]"); if (c) abrirFicha(c.dataset.id);
+  });
+  $("#tab-calendario").addEventListener("keydown", (ev) => {
+    if (ev.key !== "Enter" && ev.key !== " ") return;
+    const c = ev.target.closest && ev.target.closest('[data-id][role="button"]');
+    if (!c || ev.target !== c) return;
+    ev.preventDefault(); abrirFicha(c.dataset.id);
+  });
+
+  // Arrastar (computador): entre dias, da caixa para um dia e de volta para a caixa
+  let alvoAtual = null;
+  function marcarAlvo(el) { if (alvoAtual === el) return; if (alvoAtual) alvoAtual.classList.remove("drop-alvo"); alvoAtual = el; if (el) el.classList.add("drop-alvo"); }
+  const elDe = (t) => (t && t.nodeType === 1 ? t : t && t.parentElement);
+  function fimArrasto() {
+    document.querySelectorAll(".arrastando").forEach((x) => x.classList.remove("arrastando"));
+    marcarAlvo(null); S.cal.arrastando = null;
+    if (S.cal.renderPendente) renderCalendario();
+  }
+  $("#tab-calendario").addEventListener("dragstart", (ev) => {
+    const c = elDe(ev.target).closest('[data-id][draggable="true"]'); if (!c) return;
+    ev.dataTransfer.setData("text/plain", c.dataset.id); ev.dataTransfer.effectAllowed = "move";
+    S.cal.arrastando = c.dataset.id; requestAnimationFrame(() => c.classList.add("arrastando"));
+  });
+  $("#tab-calendario").addEventListener("dragend", fimArrasto);
+  $("#tab-calendario").addEventListener("dragover", (ev) => {
+    if (!S.cal.arrastando) return;
+    const alvo = elDe(ev.target).closest("[data-dia], #caixa"); marcarAlvo(alvo);
+    if (alvo) { ev.preventDefault(); ev.dataTransfer.dropEffect = "move"; }
+  });
+  $("#tab-calendario").addEventListener("drop", (ev) => {
+    const alvo = elDe(ev.target).closest("[data-dia], #caixa"); const id = S.cal.arrastando;
+    if (!alvo || !id) return;
+    ev.preventDefault(); fimArrasto();
+    moverPost(id, alvo.dataset.dia || null);
+  });
+  async function moverPost(id, data) {
+    const p = postPorId(id); if (!p || !S.canWrite) return;
+    if ((deIso(p.data) ? p.data : null) === data) return;
+    const ok = await salvarPost(id, data ? { data } : { data: null, hora: null });
+    if (ok) toast(data ? `Movido para ${dataCurta(data)}` : "Voltou para a caixa de ideias");
+  }
+
+  // ----- Ficha do post -----
+  function finalizarFicha() {
+    const f = S.ficha; if (!f) return;
+    if (f.unsub) f.unsub();
+    if (f.id && !f.excluido) descarregar("posts/" + f.id).catch((e) => { console.error(e); toast(erroMsg(e)); });
+    S.ficha = null;
+  }
+  function prepararFicha(estado) {
+    finalizarFicha();
+    S.ficha = estado;
+    const dlg = $("#ficha");
+    dlg.dataset.modo = estado.id ? "editar" : "novo";
+    if (document.activeElement && dlg.contains(document.activeElement)) document.activeElement.blur();
+    for (const sel of ["#f-anexos", "#f-refs", "#f-ref-lista"]) $(sel).dataset.assin = "";
+    for (const sel of ["#f-titulo", "#f-ideia", "#f-legenda", "#f-data", "#f-hora", "#f-coment", "#f-ref-busca", "#f-resp-busca", "#f-tag-nova"]) $(sel).value = "";
+    $("#form-f-ref").reset(); $("#f-ref-nova").open = false; $("#f-ref-bib").open = false; $("#f-resp-outro").open = false; $("#f-resp-res").replaceChildren();
+    for (const sel of ["#f-estado", "#f-status", "#f-formato", "#f-redes", "#f-tags", "#f-projeto", "#f-anexos", "#f-refs", "#f-ref-lista", "#f-criado", "#f-coments"]) $(sel).replaceChildren();
+    $("#f-salvo").textContent = ""; $("#f-salvo").dataset.kind = "";
+    const ex = $("#f-excluir"); ex.dataset.confirmar = ""; ex.textContent = "Excluir post";
+    if (!dlg.open) { dlg.showModal(); document.documentElement.classList.add("trava"); }
+    $("#f-corpo").scrollTop = 0;
+  }
+  function abrirFicha(id, recemCriado) {
+    if (!recemCriado && S.loaded.posts && !postPorId(id)) { toast("Esse post não existe mais."); return; }
+    prepararFicha({ id, coments: [], unsub: null, enviando: 0, visto: false, excluido: false });
+    const estado = S.ficha;
+    if (S.db) estado.unsub = S.db.collection(`posts/${id}/comentarios`).onSnapshot((snap) => {
+      if (S.ficha !== estado) return;
+      estado.coments = snap.docs.map((d) => ({ id: d.id, ...d.data() })); renderComentarios();
+    }, (e) => console.warn("comentarios", e));
+    renderComentarios();
+    atualizarFicha();
+    if (!recemCriado) $("#f-fechar").focus();
+  }
+  function novaFicha(data) {
+    if (!S.db) return toast("Abra a Central no claude.ai para salvar.");
+    if (!S.canWrite) return;
+    prepararFicha({ id: null, novo: { formato: null }, coments: [], enviando: 0 });
+    $("#f-data").value = data || "";
+    atualizarFicha();
+    $("#f-titulo").focus();
+  }
+  function fecharFicha() { const d = $("#ficha"); if (d.open) d.close(); }
+  $("#ficha").addEventListener("close", () => { finalizarFicha(); document.documentElement.classList.remove("trava"); $("#f-toast").hidden = true; });
+  $("#ficha").addEventListener("click", (ev) => { if (ev.target === ev.currentTarget) fecharFicha(); });
+  $("#f-fechar").addEventListener("click", fecharFicha);
+  $("#f-cancelar").addEventListener("click", fecharFicha);
+
+  function sincronizar(sel, valor, chave) {
+    const el = $(sel); if (document.activeElement === el) return;
+    const f = S.ficha && S.ficha.id && filas.get("posts/" + S.ficha.id);
+    if (f && f.pend && chave in f.pend) return;
+    const s = valor == null ? "" : String(valor);
+    if (el.value !== s) el.value = s;
+  }
+  function atualizarFicha() {
+    const f = S.ficha; if (!f) return;
+    const ro = !S.canWrite;
+    if (!f.id) {
+      $("#f-estado").replaceChildren(h("b", null, "Novo post"));
+      renderFormatos(f.novo.formato);
+      return;
+    }
+    const p = postPorId(f.id);
+    if (!p) { if (f.visto && !f.excluido) { f.excluido = true; fecharFicha(); toast("Este post foi excluído."); } return; }
+    f.visto = true;
+    const v = (k) => valorAtual(p, k);
+    const st = statusPost(v("status"));
+    const dataOk = deIso(v("data")) ? v("data") : null;
+    $("#f-estado").replaceChildren(
+      h("span", { style: `--c: var(--ps-${st.id});display:inline-flex` }, icone(v("formato") || "nenhum")), pillPost(st.id),
+      h("span", { class: "hint" }, dataOk ? dataCurta(dataOk) + (v("hora") ? " · " + v("hora") : "") : "Sem data"));
+    sincronizar("#f-titulo", v("titulo"), "titulo");
+    sincronizar("#f-ideia", v("ideia"), "ideia");
+    sincronizar("#f-legenda", v("legenda"), "legenda");
+    sincronizar("#f-data", dataOk, "data");
+    sincronizar("#f-hora", v("hora"), "hora");
+    contarLegenda();
+    $("#f-sem-data").hidden = !dataOk || ro;
+    renderStatusFicha(st.id); renderFormatos(v("formato")); renderRedes(v("redes") || []);
+    opcoesPessoas($("#f-resp"), () => { const q = S.ficha && postPorId(S.ficha.id); return q ? valorAtual(q, "responsavel") : null; }, [["", "Sem responsável"]]);
+    $("#f-resp-eu").hidden = ro || !S.myId || v("responsavel") === S.myId;
+    $("#f-resp-outro").hidden = ro || !S.user;
+    renderTagsFicha(p); renderProjetoFicha(p); renderAnexos(p); renderRefsFicha(p);
+    const ag = p.agendamento || AGENDAMENTO_VAZIO;
+    $("#f-ag-status").textContent = ROTULO_AGENDAMENTO[ag.status] || ROTULO_AGENDAMENTO.nao_agendado;
+    $("#f-criado").replaceChildren("Criado por", pessoa(p.criadoPor, false, "alguém do time"), quando(p.criadoEm));
+    resolverPessoas($("#f-criado"));
+    $("#f-excluir").hidden = ro;
+    $("#form-coment").hidden = ro;
+    $("#ficha").querySelectorAll("input, textarea, select").forEach((el) => { el.disabled = ro; });
+    if (!S.assets) $("#fr-arquivo-rot").textContent = "Vídeo ou imagem (só para Editores da Central)";
+    $("#fr-arquivo").disabled = ro || !S.assets;
+    indicador();
+  }
+  function contarLegenda() {
+    const t = $("#f-legenda").value; const n = [...t].length;
+    const el = $("#f-legenda-n");
+    el.textContent = `${nf.format(n)} / ${nf.format(LIMITE_LEGENDA)}` + (n > LIMITE_LEGENDA ? ` · ${nf.format(n - LIMITE_LEGENDA)} acima do limite` : "");
+    if (n > LIMITE_LEGENDA) el.dataset.alerta = "1"; else delete el.dataset.alerta;
+    const tags = (t.match(/(^|\s)#[\p{L}\p{N}_]+/gu) || []).length;
+    $("#f-legenda-hash").textContent = tags ? (tags === 1 ? "1 hashtag" : `${tags} hashtags`) : "As primeiras linhas aparecem antes do “mais”.";
+  }
+
+  // Campos de texto: salvam sozinhos quando a pessoa para de digitar
+  function ligarTexto(sel, chave) {
+    const el = $(sel);
+    el.addEventListener("input", () => {
+      const f = S.ficha; if (!f) return;
+      if (chave === "legenda") contarLegenda();
+      if (!f.id) return;
+      if (chave === "titulo" && !el.value.trim()) return;
+      salvarPost(f.id, { [chave]: chave === "titulo" ? el.value.trim() : el.value }, 900);
+    });
+    el.addEventListener("change", () => {
+      const f = S.ficha; if (!f || !f.id) return;
+      if (chave === "titulo" && !el.value.trim()) { const p = postPorId(f.id); el.value = p ? p.titulo || "" : ""; toast("O título não pode ficar vazio."); return; }
+      descarregar("posts/" + f.id).then(() => indicador("salvo"), falhou);
+    });
+  }
+  ligarTexto("#f-titulo", "titulo"); ligarTexto("#f-ideia", "ideia"); ligarTexto("#f-legenda", "legenda");
+  $("#f-titulo").addEventListener("keydown", (ev) => { if (ev.key === "Enter" && S.ficha && !S.ficha.id) { ev.preventDefault(); criarDaFicha(); } });
+  $("#f-data").addEventListener("change", (ev) => {
+    const f = S.ficha; if (!f || !f.id) return;
+    const v = ev.target.value || null;
+    salvarPost(f.id, v ? { data: v } : { data: null, hora: null }); atualizarFicha();
+  });
+  $("#f-hora").addEventListener("change", (ev) => { const f = S.ficha; if (!f || !f.id) return; salvarPost(f.id, { hora: ev.target.value || null }); atualizarFicha(); });
+  $("#f-sem-data").addEventListener("click", () => { const f = S.ficha; if (!f || !f.id) return; salvarPost(f.id, { data: null, hora: null }).then((ok) => ok && toast("Voltou para a caixa de ideias")); $("#f-data").value = ""; $("#f-hora").value = ""; atualizarFicha(); });
+  $("#f-criar").addEventListener("click", criarDaFicha);
+  async function criarDaFicha() {
+    const f = S.ficha; if (!f || f.id) return;
+    const titulo = $("#f-titulo").value.trim();
+    if (!titulo) { toast("Dê um título ao post."); $("#f-titulo").focus(); return; }
+    const data = deIso($("#f-data").value) ? $("#f-data").value : null;
+    const hora = data && $("#f-hora").value ? $("#f-hora").value : null;
+    const formato = f.novo.formato;
+    let id = null;
+    const ok = await salvando($("#f-criar"), async () => { id = await criarPost({ titulo, data, hora, formato, redes: formato ? [redePadrao(formato)] : [] }); });
+    if (ok && id && S.ficha === f) { abrirFicha(id, true); toast("Post criado"); }
+  }
+
+  function renderStatusFicha(atual) {
+    $("#f-status").replaceChildren(...PSTATUS.map((s) => h("button", { class: "stf", type: "button", style: `--c: var(--ps-${s.id})`, "aria-pressed": String(s.id === atual), disabled: !S.canWrite,
+      onclick: () => { if (!S.ficha || !S.ficha.id || s.id === atual) return; salvarPost(S.ficha.id, { status: s.id }); atualizarFicha(); } }, s.nome)));
+  }
+  function renderFormatos(atual) {
+    $("#f-formato").replaceChildren(...FORMATOS.map((fm) => h("button", { class: "opc", type: "button", "aria-pressed": String(fm.id === atual), disabled: !S.canWrite,
+      onclick: () => escolherFormato(fm.id) }, icone(fm.id), fm.nome)));
+  }
+  function escolherFormato(id) {
+    const f = S.ficha; if (!f) return;
+    if (!f.id) { f.novo.formato = f.novo.formato === id ? null : id; atualizarFicha(); return; }
+    const p = postPorId(f.id); if (!p) return;
+    const novo = valorAtual(p, "formato") === id ? null : id;
+    const campos = { formato: novo };
+    if (novo && !(valorAtual(p, "redes") || []).length) campos.redes = [redePadrao(novo)];
+    salvarPost(p.id, campos); atualizarFicha();
+  }
+  function renderRedes(atuais) {
+    $("#f-redes").replaceChildren(...REDES.map((r) => h("button", { class: "opc", type: "button", "aria-pressed": String(atuais.includes(r.id)), disabled: !S.canWrite,
+      onclick: () => { const p = S.ficha && postPorId(S.ficha.id); if (!p) return; const at = valorAtual(p, "redes") || [];
+        salvarPost(p.id, { redes: at.includes(r.id) ? at.filter((x) => x !== r.id) : [...at, r.id] }); atualizarFicha(); } }, r.nome)));
+  }
+  $("#f-resp").addEventListener("change", (ev) => { const f = S.ficha; if (!f || !f.id) return; salvarPost(f.id, { responsavel: ev.target.value || null }); atualizarFicha(); });
+  $("#f-resp-eu").addEventListener("click", () => { const f = S.ficha; if (!f || !f.id || !S.myId) return; salvarPost(f.id, { responsavel: S.myId }).then((ok) => ok && toast("Agora é seu")); atualizarFicha(); });
+  async function buscarPessoas() {
+    if (!S.user) return;
+    const q = $("#f-resp-busca").value.trim();
+    const hits = await S.user.search(q);
+    if ($("#f-resp-busca").value.trim() !== q) return;
+    const box = $("#f-resp-res");
+    box.replaceChildren(...hits.map((p) => h("button", { class: "opc", type: "button", onclick: () => {
+      const f = S.ficha; if (!f || !f.id) return;
+      S.pessoasExtras.add(p.id); salvarPost(f.id, { responsavel: p.id }); $("#f-resp-outro").open = false; atualizarFicha();
+    } }, h("img", { class: "av", src: p.avatarUrl, alt: "" }), nomePessoa(p))));
+    if (!hits.length) box.append(h("span", { class: "hint" }, q ? "Ninguém encontrado com esse nome." : "Digite o nome de alguém do time."));
+  }
+  $("#f-resp-busca").addEventListener("input", buscarPessoas);
+  $("#f-resp-outro").addEventListener("toggle", (ev) => { if (ev.target.open) buscarPessoas(); });
+
+  function renderTagsFicha(p) {
+    const atuais = valorAtual(p, "tags") || [];
+    const freq = new Map(); for (const x of S.posts) for (const t of x.tags || []) freq.set(t, (freq.get(t) || 0) + 1);
+    const outras = [...freq.keys()].filter((t) => !TAGS_SUGERIDAS.includes(t) && !atuais.includes(t)).sort((a, b) => freq.get(b) - freq.get(a)).slice(0, 8);
+    const todas = [...new Set([...TAGS_SUGERIDAS, ...atuais, ...outras])];
+    $("#f-tags").replaceChildren(...todas.map((t) => h("button", { class: "opc", type: "button", "aria-pressed": String(atuais.includes(t)), disabled: !S.canWrite, onclick: () => alternarTag(t) }, t)));
+  }
+  function alternarTag(t) {
+    const p = S.ficha && postPorId(S.ficha.id); if (!p) return;
+    const at = valorAtual(p, "tags") || [];
+    salvarPost(p.id, { tags: at.includes(t) ? at.filter((x) => x !== t) : [...at, t].slice(0, 12) }); atualizarFicha();
+  }
+  $("#f-tag-nova").addEventListener("keydown", (ev) => {
+    if (ev.key !== "Enter" && ev.key !== ",") return;
+    ev.preventDefault();
+    const t = ev.target.value.trim().replace(/^#/, "").toLowerCase().slice(0, 24); ev.target.value = "";
+    const p = S.ficha && postPorId(S.ficha.id); if (!t || !p) return;
+    if (!(valorAtual(p, "tags") || []).includes(t)) alternarTag(t);
+  });
+
+  // Projeto de vídeo ligado
+  function renderProjetoFicha(p) {
+    const box = $("#f-projeto"); box.replaceChildren();
+    const pid = p.projetoId; const fmt = formatoDe(valorAtual(p, "formato"));
+    box.hidden = !pid && !(fmt && fmt.video);
+    if (box.hidden) return;
+    box.append(h("span", { class: "eyebrow" }, "Projeto de vídeo"));
+    if (pid) {
+      const pr = S.projetos.find((x) => x.id === pid);
+      if (pr) box.append(h("div", { class: "proj-link" }, pill(pr.status), h("b", null, pr.titulo || "Sem título"),
+        (pr.versoes || []).length ? h("span", { class: "hint" }, pr.versoes.length === 1 ? "1 versão" : `${pr.versoes.length} versões`) : null,
+        h("button", { class: "btn", type: "button", style: "margin-left:auto", onclick: () => irParaProjeto(pid) }, "Abrir projeto")));
+      else if (S.loaded.projetos) box.append(h("p", { class: "hint" }, "O projeto ligado a este post foi excluído."),
+        S.canWrite ? h("button", { class: "btn", type: "button", style: "justify-self:start", onclick: () => { salvarPost(p.id, { projetoId: null }); atualizarFicha(); } }, "Desligar e criar outro") : null);
+      else box.append(h("p", { class: "hint" }, "Carregando o projeto…"));
+    } else {
+      box.append(h("p", { class: "hint" }, "Cria um projeto na aba Projetos com a ideia e a legenda no briefing. Depois é só mandar o vídeo bruto pro Claude editar."),
+        S.canWrite ? h("button", { class: "btn primary", type: "button", style: "justify-self:start", onclick: (ev) => virarProjeto(ev.currentTarget) }, icone("filme"), "Virar projeto de vídeo") : null);
+    }
+  }
+  function irParaProjeto(pid) { fecharFicha(); location.hash = "projetos"; mostrarAba(); abrirProjeto(pid); }
+  async function virarProjeto(btn) {
+    const f = S.ficha; const p = f && postPorId(f.id); if (!p || !S.db || p.projetoId) return;
+    const titulo = $("#f-titulo").value.trim() || p.titulo || "Sem título";
+    const ideia = $("#f-ideia").value.trim(); const legenda = $("#f-legenda").value.trim();
+    const fmt = formatoDe(valorAtual(p, "formato")); const data = deIso(valorAtual(p, "data")) ? valorAtual(p, "data") : null; const hora = valorAtual(p, "hora");
+    const partes = [];
+    if (ideia) partes.push("Ideia / roteiro:\n" + ideia);
+    if (legenda) partes.push("Legenda do post:\n" + legenda);
+    partes.push(`Post do calendário: ${fmt ? fmt.nome : "vídeo"}, ${data ? dataLonga(data) + (hora ? " às " + hora : "") : "ainda sem data"}.`);
+    const est = estiloPadrao();
+    const ok = await salvando(btn, async () => {
+      await descarregar("posts/" + p.id);
+      const ref = await S.db.collection("projetos").add({
+        titulo, briefing: partes.join("\n\n"), estiloId: est ? est.id : null, status: "bruto",
+        responsavel: valorAtual(p, "responsavel") || S.myId, storyboard: [], storyboardResumo: "", versoes: [],
+        postId: p.id, criadoPor: S.myId, criadoEm: agora(), atualizadoEm: agora(),
+      });
+      await gravarPost(p.id, { projetoId: ref.id });
+    });
+    if (ok) toast("Projeto criado na aba Projetos");
+  }
+
+  // Anexos
+  function renderAnexos(p) {
+    const box = $("#f-anexos"); const lista = valorAtual(p, "anexos") || []; const enviando = S.ficha.enviando;
+    $("#f-anexos-vazio").hidden = lista.length > 0 || enviando > 0;
+    $("#f-anexo-btn").hidden = !S.canWrite || !S.assets;
+    $("#f-anexo-hint").textContent = S.assets ? "Imagens e vídeos de até 20 MB cada." : "Só quem é Editor da Central pode enviar arquivos.";
+    const assin = JSON.stringify([lista, enviando, S.canWrite]);
+    if (box.dataset.assin === assin) return; // não recria os vídeos (nem interrompe quem está assistindo)
+    box.dataset.assin = assin;
+    box.replaceChildren(...lista.map((a) => h("figure", { class: "anexo" },
+      a.tipo === "video" ? h("video", { src: blob(a.id), controls: true, playsinline: true, preload: "metadata" }) : h("img", { src: blob(a.id), alt: "Anexo do post", loading: "lazy" }),
+      S.canWrite ? h("button", { class: "tirar", type: "button", "aria-label": "Remover anexo", onclick: (ev) => removerAnexo(a, ev.currentTarget) }, icone("fechar")) : null)),
+      ...Array.from({ length: enviando }, () => h("div", { class: "anexo" }, "Enviando…")));
+  }
+  $("#f-anexo-arq").addEventListener("change", async (ev) => {
+    const arquivos = [...ev.target.files]; ev.target.value = "";
+    const f = S.ficha; if (!f || !f.id || !S.assets || !arquivos.length) return;
+    let n = 0;
+    for (const arq of arquivos) {
+      const tipo = arq.type.startsWith("video/") ? "video" : arq.type.startsWith("image/") ? "imagem" : null;
+      if (!tipo) { toast(`${arq.name}: envie uma imagem ou um vídeo.`); continue; }
+      if (arq.size > MAX_BYTES) { toast(`${arq.name} passa de 20 MB. Comprima e tente de novo.`); continue; }
+      f.enviando++; if (S.ficha === f) atualizarFicha();
+      try {
+        const up = await S.assets.upload(arq);
+        const p = postPorId(f.id); if (!p) break;
+        await gravarPost(f.id, { anexos: [...(valorAtual(p, "anexos") || []), { id: up.id, tipo }] }); n++;
+      } catch (e) { falhou(e); }
+      finally { f.enviando--; if (S.ficha === f) atualizarFicha(); }
+    }
+    if (n) toast(n === 1 ? "Anexo adicionado" : `${n} anexos adicionados`);
+  });
+  async function removerAnexo(a, btn) {
+    if (btn.dataset.confirmar !== "1") { btn.dataset.confirmar = "1"; btn.replaceChildren("Remover?"); setTimeout(() => { if (btn.isConnected) { btn.dataset.confirmar = ""; btn.replaceChildren(icone("fechar")); } }, 3500); return; }
+    const p = S.ficha && postPorId(S.ficha.id); if (!p) return;
+    const ok = await salvarPost(p.id, { anexos: (valorAtual(p, "anexos") || []).filter((x) => x.id !== a.id) });
+    if (ok) { if (S.assets) { try { await S.assets.delete(a.id); } catch (e) { console.warn(e); } } toast("Anexo removido"); }
+  }
+
+  // Referências: da biblioteca (coleção referencias) ou nova
+  function miniaturaRef(r) {
+    if (r && r.arquivo && r.tipoArquivo === "video") return h("video", { src: blob(r.arquivo) + "#t=0.5", muted: true, playsinline: true, preload: "metadata" });
+    if (r && r.arquivo) return h("img", { src: blob(r.arquivo), alt: "", loading: "lazy" });
+    return icone("link");
+  }
+  function renderRefsFicha(p) {
+    const ids = valorAtual(p, "referencias") || [];
+    const box = $("#f-refs");
+    const assin = JSON.stringify([ids, S.refs.map((r) => [r.id, r.titulo, r.arquivo, r.criador, r.link]), S.canWrite]);
+    if (box.dataset.assin !== assin) {
+      box.dataset.assin = assin;
+      box.replaceChildren(...ids.map((id) => {
+        const r = S.refs.find((x) => x.id === id);
+        return h("div", { class: "fref" }, h("div", { class: "fref-mini" }, miniaturaRef(r)),
+          h("div", { class: "fref-tx" }, h("b", null, r ? (r.titulo || "Sem título") : "Referência excluída da biblioteca"),
+            r && r.criador ? h("span", { class: "hint" }, r.criador) : null,
+            r && r.link && /^https?:\/\//.test(r.link) ? h("a", { href: r.link, target: "_blank", rel: "noopener noreferrer" }, "Abrir original ↗") : null),
+          S.canWrite ? h("button", { class: "btn ghost", type: "button", onclick: () => alternarRef(id) }, "Tirar") : null);
+      }));
+      if (!ids.length) box.append(h("p", { class: "hint" }, "Nenhuma referência ainda. Escolha da biblioteca da equipe ou envie uma nova."));
+    }
+    renderBiblioteca(ids);
+  }
+  function renderBiblioteca(ids) {
+    $("#f-ref-bib-n").textContent = S.loaded.referencias ? `(${S.refs.length})` : "";
+    if (!$("#f-ref-bib").open) return;
+    const q = $("#f-ref-busca").value.trim().toLowerCase();
+    const lista = [...S.refs].sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""))
+      .filter((r) => !q || [r.titulo, r.criador, r.notas, ...(r.tags || [])].join(" ").toLowerCase().includes(q));
+    const box = $("#f-ref-lista");
+    const assin = JSON.stringify([q, ids, S.canWrite, lista.map((r) => [r.id, r.titulo, r.arquivo, r.criador, r.tags])]);
+    if (box.dataset.assin === assin) return;
+    box.dataset.assin = assin;
+    box.replaceChildren(...lista.map((r) => {
+      const on = ids.includes(r.id);
+      return h("button", { class: "bib-item", type: "button", "aria-pressed": String(on), disabled: !S.canWrite, onclick: () => alternarRef(r.id) },
+        h("span", { class: "fref-mini" }, miniaturaRef(r)),
+        h("span", { class: "fref-tx" }, h("b", null, r.titulo || "Sem título"), h("span", { class: "hint" }, [r.criador, (r.tags || []).join(", ")].filter(Boolean).join(" · "))),
+        h("span", { class: "marca-sel" }, on ? icone("check") : null));
+    }));
+    if (!S.refs.length) box.append(h("p", { class: "hint" }, "A biblioteca ainda está vazia. Envie a primeira referência logo abaixo."));
+    else if (!lista.length) box.append(h("p", { class: "hint" }, "Nada encontrado com essa busca."));
+  }
+  function alternarRef(id) {
+    const p = S.ficha && postPorId(S.ficha.id); if (!p) return;
+    const at = valorAtual(p, "referencias") || [];
+    salvarPost(p.id, { referencias: at.includes(id) ? at.filter((x) => x !== id) : [...at, id] }); atualizarFicha();
+  }
+  const refsDaFicha = () => { const p = S.ficha && postPorId(S.ficha.id); if (p) renderBiblioteca(valorAtual(p, "referencias") || []); };
+  $("#f-ref-bib").addEventListener("toggle", refsDaFicha);
+  $("#f-ref-busca").addEventListener("input", refsDaFicha);
+  $("#form-f-ref").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const f = S.ficha; const p = f && postPorId(f.id); if (!p || !S.db) return;
+    const arq = $("#fr-arquivo").files[0]; const link = $("#fr-link").value.trim();
+    if (!arq && !link) return toast("Envie um arquivo ou cole um link.");
+    if (link && !/^https?:\/\//i.test(link)) return toast("O link precisa começar com https://");
+    if (arq && arq.size > MAX_BYTES) return toast("O arquivo passa de 20 MB. Comprima ou use só o link.");
+    const titulo = $("#fr-titulo").value.trim() || (arq ? arq.name.replace(/\.[^.]+$/, "") : "") || "Referência";
+    const ok = await salvando($("#fr-salvar"), async () => {
+      let arquivo = null, tipoArquivo = null;
+      if (arq) {
+        if (!S.assets) throw { code: "invalid_argument" };
+        toast("Enviando arquivo…");
+        const up = await S.assets.upload(arq); arquivo = up.id; tipoArquivo = arq.type.startsWith("video") ? "video" : "imagem";
+      }
+      const ref = await S.db.collection("referencias").add({
+        titulo, criador: "", link, arquivo, tipoArquivo, estiloId: null, tags: [], notas: $("#fr-notas").value.trim(),
+        adicionadoPor: S.myId, porClaude: false, criadoEm: agora(),
+      });
+      const atual = postPorId(f.id) || p;
+      await gravarPost(f.id, { referencias: [...(valorAtual(atual, "referencias") || []), ref.id] });
+    });
+    if (ok) { $("#form-f-ref").reset(); $("#f-ref-nova").open = false; toast("Referência adicionada ao post e à biblioteca"); }
+  });
+
+  // Comentários
+  function renderComentarios() {
+    const f = S.ficha; if (!f || !f.id) return;
+    const ul = $("#f-coments"); ul.replaceChildren();
+    const cs = [...f.coments].sort((a, b) => (a.criadoEm || "").localeCompare(b.criadoEm || ""));
+    $("#f-coments-n").textContent = cs.length ? `(${cs.length})` : "";
+    if (!cs.length) ul.append(h("li", { class: "hint" }, "Ninguém comentou ainda. Use os comentários para combinar o roteiro, a legenda ou a data."));
+    for (const c of cs) ul.append(h("li", { class: "note" },
+      h("small", null, pessoa(c.autor, c.porClaude, "Alguém do time"), h("span", null, quando(c.criadoEm))),
+      h("p", null, c.texto || "")));
+    resolverPessoas(ul);
+  }
+  $("#form-coment").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const f = S.ficha; if (!f || !f.id || !S.db) return;
+    const texto = $("#f-coment").value.trim(); if (!texto) return;
+    const ok = await salvando($("#f-coment-enviar"), () => S.db.collection(`posts/${f.id}/comentarios`).add({ texto, autor: S.myId, criadoEm: agora() }));
+    if (ok) { $("#f-coment").value = ""; toast("Comentário enviado"); }
+  });
+
+  // Excluir post (com confirmação na própria página)
+  $("#f-excluir").addEventListener("click", async (ev) => {
+    const btn = ev.currentTarget; const f = S.ficha; const p = f && postPorId(f.id); if (!p) return;
+    if (btn.dataset.confirmar !== "1") {
+      btn.dataset.confirmar = "1"; btn.textContent = "Confirmar exclusão";
+      setTimeout(() => { if (btn.dataset.confirmar === "1") { btn.dataset.confirmar = ""; btn.textContent = "Excluir post"; } }, 4000);
+      return;
+    }
+    btn.dataset.confirmar = "";
+    const path = "posts/" + p.id; const fl = fila(path); fl.pend = null; clearTimeout(fl.t); fl.t = null;
+    const ok = await salvando(btn, async () => {
+      const snap = await S.db.collection(`${path}/comentarios`).get();
+      for (const d of snap.docs) await S.db.doc(`${path}/comentarios/${d.id}`).delete();
+      if (S.assets) for (const a of p.anexos || []) { try { await S.assets.delete(a.id); } catch (e) { console.warn(e); } }
+      if (p.projetoId && S.projetos.some((x) => x.id === p.projetoId)) { try { await S.db.doc(`projetos/${p.projetoId}`).update({ postId: null }); } catch (e) { console.warn(e); } }
+      await emFila(path, () => S.db.doc(path).delete());
+    });
+    btn.textContent = "Excluir post";
+    if (ok) { f.excluido = true; fecharFicha(); toast("Post excluído"); }
+  });
+
   // ---------- inicialização ----------
   function renderTudo() {
     selectEstilos($("#np-estilo"), $("#np-estilo").value, false);
     selectEstilos($("#r-estilo"), $("#r-estilo").value, true);
-    renderProjetos(); renderListaEstilos(); renderRefs();
+    renderProjetos(); renderListaEstilos(); renderRefs(); renderCalendario();
     if (!S.rascunho && S.estilos.length && S.loaded.estilos) selecionarEstilo((estiloPadrao() || S.estilos[0]).id);
   }
   function assinar(nome, chave) {
@@ -874,6 +1924,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
   let timer = null;
 
   async function init() {
+    $("#cal-filtros").open = !mqCel.matches;
     mostrarAba(); renderPrevia(); iniciarPrevia(); renderTudo();
     const C = window.claude;
     if (!C || !C.use) { banner("Abra esta página no claude.ai para ver e salvar os dados da equipe."); for (const k in S.loaded) S.loaded[k] = true; renderTudo(); return; }
@@ -888,7 +1939,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
     if (!S.assets) $("#r-arquivo-campo").querySelector("span").textContent = "Vídeo ou imagem (só para Editores da Central)";
     if (!db) { banner("Entre na sua conta do claude.ai para ver os dados da equipe."); for (const k in S.loaded) S.loaded[k] = true; renderTudo(); return; }
     timer = setTimeout(() => banner("Ainda não consegui carregar os dados da equipe. Verifique a conexão; a página continua tentando."), 10000);
-    assinar("estilos", "estilos"); assinar("referencias", "refs"); assinar("projetos", "projetos");
+    assinar("estilos", "estilos"); assinar("referencias", "refs"); assinar("projetos", "projetos"); assinar("posts", "posts");
   }
   init();
 })();
