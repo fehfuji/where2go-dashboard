@@ -450,6 +450,12 @@ table.geral { width: 100%; border-collapse: collapse; font-size: 13.5px; min-wid
 .rl-lista { margin: 0; padding-left: 20px; display: grid; gap: 5px; font-size: 14.5px; }
 .rl-lista li { overflow-wrap: anywhere; }
 .rl-lista .hint { font-size: 12.5px; }
+.at-dia { display: grid; gap: 6px; }
+.at-dia > h3 { font-family: var(--font-mono); font-size: 11.5px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.at-item { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 9px 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); font-size: 14px; min-width: 0; }
+.at-item[role="button"] { cursor: pointer; }
+.at-item[role="button"]:hover { border-color: var(--muted); }
+.at-tx { overflow-wrap: anywhere; min-width: 0; }
 .pr-filtro select { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 10px; font-size: 13.5px; max-width: 100%; }
 .etapa .hint { padding: 0 4px; }
 .vchip { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 6px; color: var(--c2); background: color-mix(in srgb, var(--c2) 12%, transparent); white-space: nowrap; }
@@ -562,12 +568,14 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     <a href="#producao" data-tab="producao" data-ic="quadro"><span>Produção</span></a>
     <a href="#desempenho" data-tab="desempenho" data-ic="grafico"><span>Desempenho</span></a>
     <a href="#relatorios" data-tab="relatorios" data-ic="relatorio" class="sec primeiro"><span>Relatórios</span></a>
+    <a href="#atividade" data-tab="atividade" data-ic="historico" class="sec"><span>Atividade</span></a>
     <a href="#biblioteca" data-tab="biblioteca" data-ic="ref" class="sec"><span>Biblioteca</span></a>
     <a href="#config" data-tab="config" data-ic="engrenagem" class="sec"><span>Configurações</span></a>
     <button type="button" class="nav-mais" id="nav-mais" data-ic="mais3" aria-expanded="false" aria-controls="mais-menu"><span>Mais</span></button>
   </nav>
   <div class="mais-menu" id="mais-menu" hidden>
     <a href="#relatorios" data-ic="relatorio"><span>Relatórios</span></a>
+    <a href="#atividade" data-ic="historico"><span>Atividade</span></a>
     <a href="#biblioteca" data-ic="ref"><span>Biblioteca</span></a>
     <a href="#config" data-ic="engrenagem"><span>Configurações</span></a>
   </div>
@@ -734,6 +742,19 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
         <h3 id="rl-ant-t">Relatórios anteriores</h3>
         <div class="lista-mini" id="rl-lista"></div>
       </section>
+    </section>
+
+    <!-- ATIVIDADE -->
+    <section id="tab-atividade" data-section="atividade" hidden>
+      <div class="section-head">
+        <div><h2 id="at-titulo">Atividade</h2><p id="at-dica"></p></div>
+        <div class="painel-acoes pr-filtro">
+          <select id="at-pessoa" aria-label="Pessoa" hidden></select>
+          <select id="at-periodo" aria-label="Período"><option value="1">Hoje</option><option value="7" selected>Últimos 7 dias</option><option value="30">Últimos 30 dias</option></select>
+        </div>
+      </div>
+      <div class="lista-mini" id="at-pessoas" style="margin-bottom:14px"></div>
+      <div class="stack" id="at-lista" style="gap:16px"></div>
     </section>
 
     <!-- BIBLIOTECA -->
@@ -1123,7 +1144,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   $("#cli-sel").addEventListener("change", (ev) => { S.cli = ev.target.value; gravarLocal("central.cliente", S.cli); S.pn.sel = null; S.rascunho = null; S.estiloSel = null; renderTudo(); });
 
   // ---------- navegação (na ordem do trabalho) ----------
-  const ROTAS = ["inicio", "calendario", "ideias", "producao", "desempenho", "relatorios", "biblioteca", "config"];
+  const ROTAS = ["inicio", "calendario", "ideias", "producao", "desempenho", "relatorios", "atividade", "biblioteca", "config"];
   const APELIDOS = { projetos: "producao", painel: "desempenho", estilos: "biblioteca", referencias: "biblioteca" }; // links antigos continuam funcionando
   function fecharMais() { $("#mais-menu").hidden = true; $("#nav-mais").setAttribute("aria-expanded", "false"); }
   function mostrarAba() {
@@ -1133,9 +1154,10 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     const aba = ROTAS.includes(pedido) ? pedido : "inicio";
     for (const a of ROTAS) $("#tab-" + a).hidden = a !== aba;
     document.querySelectorAll("#nav a, #mais-menu a").forEach((a) => a.setAttribute("aria-current", a.getAttribute("href") === "#" + aba ? "page" : "false"));
-    $("#nav-mais").setAttribute("aria-current", ["relatorios", "biblioteca", "config"].includes(aba) ? "page" : "false");
+    $("#nav-mais").setAttribute("aria-current", ["relatorios", "atividade", "biblioteca", "config"].includes(aba) ? "page" : "false");
     fecharMais(); mostrarBib();
     if (S.aba !== aba) { S.aba = aba; window.scrollTo(0, 0); }
+    if (aba === "atividade") renderAtividade();
   }
   window.addEventListener("hashchange", mostrarAba);
   $("#nav-mais").addEventListener("click", (ev) => { ev.stopPropagation(); const m = $("#mais-menu"); m.hidden = !m.hidden; $("#nav-mais").setAttribute("aria-expanded", String(!m.hidden)); });
@@ -1174,6 +1196,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   function soltarNotas() { if (fv.unsub) fv.unsub(); fv.projetoId = null; fv.notas = []; fv.unsub = null; }
   async function salvarProjeto(pr, campos, btn, msg) {
     const ok = await salvando(btn, () => emFila("projetos/" + pr.id, () => S.db.doc(`projetos/${pr.id}`).update({ ...campos, atualizadoEm: agora() })));
+    if (ok) registrarProjeto(pr, campos);
     if (ok && msg) toast(msg);
     return ok;
   }
@@ -1268,7 +1291,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       return h("li", { class: "note" + (n.resolvida ? " done" : "") },
         h("small", null, pessoa(n.autor, n.porClaude, "Alguém do time"), ts, h("span", null, quando(n.criadoEm)),
           S.canWrite ? h("button", { class: "btn ghost", type: "button", style: "padding:0 4px;font-size:12px", onclick: (ev) =>
-            salvando(ev.currentTarget, () => emFila(`projetos/${pr.id}/notas/${n.id}`, () => S.db.doc(`projetos/${pr.id}/notas/${n.id}`).update({ resolvida: !n.resolvida }))) }, n.resolvida ? "Reabrir" : "Resolver") : null),
+            salvando(ev.currentTarget, () => emFila(`projetos/${pr.id}/notas/${n.id}`, () => S.db.doc(`projetos/${pr.id}/notas/${n.id}`).update({ resolvida: !n.resolvida }))).then((ok) => ok && registrar("video", `${n.resolvida ? "reabriu" : "resolveu"} um comentário do vídeo de “${String(p.titulo || "um post").slice(0, 80)}”`, { postId: p.id, clienteId: p.clienteId || null })) }, n.resolvida ? "Reabrir" : "Resolver") : null),
         h("p", null, n.texto || ""));
     })));
     poe(corpo, ...partes);
@@ -1311,7 +1334,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       });
       await emFila("projetos/" + pr.id, () => S.db.doc(`projetos/${pr.id}`).update({ atualizadoEm: agora() }));
     });
-    if (ok) { $("#fv-nota-texto").value = ""; toast("Comentário enviado"); }
+    if (ok) { registrar("comentou", `comentou no vídeo de “${String(p.titulo || "um post").slice(0, 80)}”: ${texto.slice(0, 90)}`, { postId: p.id, clienteId: p.clienteId || null }); $("#fv-nota-texto").value = ""; toast("Comentário enviado"); }
   });
 
   // ---------- ESTILOS ----------
@@ -1390,7 +1413,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       if (corpo.padrao) for (const o of S.estilos) if (o.id !== id && o.padrao && (o.clienteId || null) === corpo.clienteId) await S.db.doc(`estilos/${o.id}`).update({ padrao: false });
       if (corpo.clienteId) { const c = clientePorId(corpo.clienteId); if (c && (corpo.padrao ? c.estiloId !== id : c.estiloId === id)) await emFila("clientes/" + c.id, () => S.db.doc("clientes/" + c.id).update({ estiloId: corpo.padrao ? id : null })); }
     });
-    if (ok) { S.estiloSel = id; S.rascunho.atualizadoEm = agora(); $("#e-info").textContent = "Salvo agora."; toast("Estilo salvo"); }
+    if (ok) { registrar("estilo", `salvou o estilo de edição “${String(S.rascunho.nome || "sem nome").slice(0, 80)}”`, { clienteId: S.rascunho.clienteId || null }); S.estiloSel = id; S.rascunho.atualizadoEm = agora(); $("#e-info").textContent = "Salvo agora."; toast("Estilo salvo"); }
   });
   $("#e-duplicar").addEventListener("click", () => { if (!S.rascunho) return; S.rascunho = { ...S.rascunho, nome: (S.rascunho.nome || "Estilo") + " (cópia)", padrao: false, atualizadoEm: null }; S.estiloSel = null; preencherForm(); renderListaEstilos(); toast("Cópia criada. Salve para guardar."); });
   $("#novo-estilo").addEventListener("click", () => { const cid = clienteEmFoco(); S.estiloSel = null; S.rascunho = { ...PADRAO, nome: cid ? "Estilo " + nomeCliente(cid) : "Novo estilo", regras: "", clienteId: cid, padrao: !S.estilos.some((e) => (e.clienteId || null) === cid && e.padrao), logo: null }; preencherForm(); renderListaEstilos(); renderPrevia(); $("#e-nome").focus(); });
@@ -1400,7 +1423,9 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     if (btn.dataset.confirmar !== "1") { btn.dataset.confirmar = "1"; btn.textContent = "Confirmar exclusão"; setTimeout(() => { btn.dataset.confirmar = ""; btn.textContent = "Excluir"; }, 4000); return; }
     btn.dataset.confirmar = ""; btn.textContent = "Excluir";
     const id = S.estiloSel;
-    salvando(btn, async () => { await S.db.doc(`estilos/${id}`).delete(); S.estiloSel = null; S.rascunho = null; toast("Estilo excluído"); });
+    const est = estiloPorId(id);
+    salvando(btn, async () => { await S.db.doc(`estilos/${id}`).delete(); S.estiloSel = null; S.rascunho = null; toast("Estilo excluído");
+      registrar("estilo", `excluiu o estilo de edição “${String((est && est.nome) || "sem nome").slice(0, 80)}”`, { clienteId: (est && est.clienteId) || null }); });
   });
 
   // Prévia do celular
@@ -1460,6 +1485,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
               await S.db.doc(`referencias/${r.id}`).delete();
               if (r.arquivo && S.assets) { try { await S.assets.delete(r.arquivo); } catch (e) { console.warn(e); } }
               toast("Referência excluída");
+              registrar("referencia", `excluiu a referência “${String(r.titulo || "sem título").slice(0, 80)}”`, { clienteId: r.clienteId || null });
             });
           } }, "Excluir") : null));
       el.append(card);
@@ -1486,7 +1512,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
         notas: $("#r-notas").value.trim(), adicionadoPor: S.myId, porClaude: false, criadoEm: agora(),
       });
     });
-    if (ok) { $("#form-ref").reset(); toast("Referência adicionada"); }
+    if (ok) { registrar("referencia", `adicionou a referência “${titulo.slice(0, 80)}”`, { clienteId: $("#r-cliente").value || null }); $("#form-ref").reset(); toast("Referência adicionada"); }
   });
 
   // ---------- CALENDÁRIO ----------
@@ -1537,6 +1563,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     desce: '<path d="M12 5v14M6 13l6 6 6-6"/>',
     alerta: '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/>',
     relogio: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    historico: '<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4.5V8H8"/><path d="M12 8v4.2l2.8 1.8"/>',
     relatorio: '<path d="M7 3.5h7l4 4v13H7z"/><path d="M14 3.5v4h4M10 12h5M10 15.5h5"/>',
     casa: '<path d="M4 11l8-6.5 8 6.5"/><path d="M6 9.5V19h12V9.5"/><path d="M10 19v-5h4v5"/>',
     calendario: '<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
@@ -1584,7 +1611,9 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     return emFila(path, async () => {
       const patch = f.pend; f.pend = null;
       if (!patch) return;
+      const antes = path.startsWith("posts/") ? postPorId(path.slice(6)) : null;
       await S.db.doc(path).update({ ...patch, atualizadoEm: agora() });
+      if (antes) registrarPost(antes, patch);
     });
   }
   // Rejeita se não salvar (para quem precisa saber).
@@ -1616,12 +1645,14 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   }
   async function criarPost(campos) {
     const cid = campos.clienteId !== undefined ? campos.clienteId : clienteEmFoco();
-    const ref = await S.db.collection("posts").add({
+    const corpo = {
       titulo: "", ideia: "", legenda: "", formato: null, redes: [], data: null, hora: null, status: "ideia",
       responsavel: null, tags: [], anexos: [], referencias: [], projetoId: null, agendamento: { ...AGENDAMENTO_VAZIO },
       clienteId: cid || null, contaId: contaPadrao(cid), prazo: null, aprovacao: null, midiaId: null,
       criadoPor: S.myId, criadoEm: agora(), atualizadoEm: agora(), ...campos,
-    });
+    };
+    const ref = await S.db.collection("posts").add(corpo);
+    registrar("criou", `criou “${String(corpo.titulo || "Sem título").slice(0, 80)}”`, { postId: ref.id, clienteId: corpo.clienteId || null, titulo: String(corpo.titulo || "").slice(0, 80) });
     return ref.id;
   }
 
@@ -2214,7 +2245,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       const atual = postPorId(f.id) || p;
       await gravarPost(f.id, { referencias: [...(valorAtual(atual, "referencias") || []), ref.id] });
     });
-    if (ok) { $("#form-f-ref").reset(); $("#f-ref-nova").open = false; toast("Referência adicionada ao post e à biblioteca"); }
+    if (ok) { registrar("referencia", `adicionou a referência “${titulo.slice(0, 80)}” em “${String(p.titulo || "um post").slice(0, 80)}”`, { postId: p.id, clienteId: p.clienteId || null }); $("#form-f-ref").reset(); $("#f-ref-nova").open = false; toast("Referência adicionada ao post e à biblioteca"); }
   });
 
   // Comentários
@@ -2234,7 +2265,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     const f = S.ficha; if (!f || !f.id || !S.db) return;
     const texto = $("#f-coment").value.trim(); if (!texto) return;
     const ok = await salvando($("#f-coment-enviar"), () => S.db.collection(`posts/${f.id}/comentarios`).add({ texto, autor: S.myId, criadoEm: agora() }));
-    if (ok) { $("#f-coment").value = ""; toast("Comentário enviado"); }
+    if (ok) { const p = postPorId(f.id); registrar("comentou", `comentou em “${String((p && p.titulo) || "um post").slice(0, 80)}”: ${texto.slice(0, 90)}`, { postId: f.id, clienteId: (p && p.clienteId) || null }); $("#f-coment").value = ""; toast("Comentário enviado"); }
   });
 
   // Excluir post (com confirmação na própria página)
@@ -2261,7 +2292,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       await emFila(path, () => S.db.doc(path).delete());
     });
     btn.textContent = "Excluir post";
-    if (ok) { f.excluido = true; fecharFicha(); toast("Post excluído"); }
+    if (ok) { registrar("excluiu", `excluiu “${String(p.titulo || "Sem título").slice(0, 80)}”${p.projetoId ? " e a edição de vídeo" : ""}`, { clienteId: p.clienteId || null, titulo: p.titulo || "" }); f.excluido = true; fecharFicha(); toast("Post excluído"); }
   });
 
   // ---------- PAINEL ----------
@@ -2439,6 +2470,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
         criadoEm: agora(), porClaude: true, geradoPor: S.myId };
       if (!campos.funciona.length && !campos.naoFunciona.length) throw { code: "empty_completion" };
       await gravarAnalise(c.id, campos);
+      registrar("analise", `gerou a análise da @${c.username || "conta"}`, { clienteId: c.clienteId || null });
       toast("Análise pronta");
     } catch (e) {
       console.warn("analise", e);
@@ -2472,6 +2504,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       try {
         await S.pn.mcp.callTool(SERVIDOR_CCR, "fire_trigger", { trigger_id: gid, text: `Conta: ${c.id} (@${c.username || "conta"}).` }, { cache: false });
         toast("Pesquisando. Os assuntos aparecem aqui em alguns minutos.");
+        registrar("tendencias", `pediu a busca de assuntos em alta da @${c.username || "conta"}`, { clienteId: c.clienteId || null });
       } catch (e) {
         console.warn("busca", e);
         await gravarAnalise(c.id, { buscando: null }).catch(() => {});
@@ -2589,7 +2622,8 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   }
   function salvarConta(id, campos) {
     if (!S.db) return toast("Abra a Central no claude.ai para salvar.");
-    emFila("contas/" + id, () => S.db.doc("contas/" + id).update(campos)).then(() => toast("Conta atualizada"), (e) => { console.error(e); toast(erroMsg(e)); });
+    emFila("contas/" + id, () => S.db.doc("contas/" + id).update(campos)).then(() => { toast("Conta atualizada"); const c = S.contas.find((x) => x.id === id);
+      registrar("conta", `alterou ${listaPt(Object.keys(campos).map((k) => ({ ativa: "a exibição", nicho: "o nicho", clienteId: "o cliente" })[k] || k))} da conta @${(c && c.username) || "conta"}`, { clienteId: campos.clienteId || (c && c.clienteId) || null }); }, (e) => { console.error(e); toast(erroMsg(e)); });
   }
   $("#pn-ordem").addEventListener("change", (ev) => { S.pn.ordem = ev.target.value; renderPainel(); });
 
@@ -2677,6 +2711,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       if (parou) toast(msgMcp(parou));
       else if (falhas.length) toast(`Não deu para atualizar ${falhas.map((u) => "@" + u).join(", ")}.`);
       else if (certas) toast("Números atualizados");
+      if (certas) registrar("numeros", `atualizou os números do Instagram de ${certas} ${certas === 1 ? "conta" : "contas"}`, { clienteId: clienteEmFoco() });
     }
   });
 
@@ -2892,7 +2927,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   });
 
   // Tocar num cartão abre a ficha (Início, Ideias, Produção)
-  for (const aba of ["#tab-inicio", "#tab-ideias", "#tab-producao"]) {
+  for (const aba of ["#tab-inicio", "#tab-ideias", "#tab-producao", "#tab-atividade"]) {
     $(aba).addEventListener("click", (ev) => {
       const b = ev.target.closest("[data-acao]");
       if (b) { const card = b.closest("[data-id]"); if (card) triagem(card.dataset.id, b.dataset.acao); return; }
@@ -3012,6 +3047,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       if (!texto.resumo && !texto.destaques.length) throw { code: "empty_completion" };
       const ref = await S.db.collection("relatorios").add({ clienteId: cid, de: d.de, ate: d.ate, dados: d, texto, docUrl: null, criadoEm: agora(), geradoPor: S.myId, porClaude: true });
       S.rlSel = ref.id; toast("Relatório pronto");
+      registrar("relatorio", `gerou o relatório semanal de ${nomeCliente(cid)}`, { clienteId: cid });
     } catch (e) {
       console.warn("relatorio", e);
       toast(e && e.code && !["invalid_argument", "quota_exceeded", "resource_exhausted"].includes(e.code) ? msgSample(e).replace("a análise", "o relatório") : erroMsg(e));
@@ -3070,6 +3106,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
         const url = typeof pl.url === "string" && /^https:\/\//.test(pl.url) ? pl.url : null;
         if (url) await emFila("relatorios/" + r.id, () => S.db.doc("relatorios/" + r.id).update({ docUrl: url }));
         toast(url ? "Documento criado" : "Documento criado no Claude Docs");
+        registrar("relatorio", `criou o documento do relatório de ${nomeCliente(r.clienteId)}`, { clienteId: r.clienteId || null });
       } else toast("O Claude Docs não confirmou a criação. Confira no Claude Docs antes de tentar de novo.");
     } catch (e) {
       console.warn("docs", e);
@@ -3093,7 +3130,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     const excluir = S.canWrite ? h("button", { class: "btn danger ghost", type: "button", onclick: (ev) => {
       const b = ev.currentTarget;
       if (b.dataset.confirmar !== "1") { b.dataset.confirmar = "1"; b.textContent = "Confirmar exclusão"; setTimeout(() => { if (b.isConnected) { b.dataset.confirmar = ""; b.textContent = "Excluir"; } }, 4000); return; }
-      salvando(b, () => S.db.doc("relatorios/" + r.id).delete()).then((ok) => { if (ok) { S.rlSel = null; toast("Relatório excluído"); } });
+      salvando(b, () => S.db.doc("relatorios/" + r.id).delete()).then((ok) => { if (ok) { S.rlSel = null; toast("Relatório excluído"); registrar("relatorio", `excluiu o relatório de ${nomeCliente(r.clienteId)} (${rotuloPeriodo(r.de, r.ate)})`, { clienteId: r.clienteId || null }); } });
     } }, "Excluir") : null;
     return h("article", { class: "panel stack relatorio" },
       h("div", { class: "cab-sec" }, h("div", null, h("span", { class: "eyebrow" }, "Relatório semanal"), h("h3", null, nomeCliente(r.clienteId) + " · " + rotuloPeriodo(r.de, r.ate))),
@@ -3139,10 +3176,140 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   }
   $("#rl-gerar").addEventListener("click", gerarRelatorio);
 
+  // ---------- ATIVIDADE: quem fez o quê ----------
+  // Cada pessoa grava só o próprio histórico em atividade/{id}/dias/{AAAA-MM-DD}. As regras do banco deixam
+  // só a dona da Central ler o de todas e impedem qualquer pessoa (a dona inclusive) de mexer no registro de outra.
+  const listaPt = (l) => (l.length <= 1 ? l.join("") : l.slice(0, -1).join(", ") + " e " + l[l.length - 1]);
+  function registrar(acao, texto, extra) {
+    if (!S.db || !S.myId || !S.canWrite) return;
+    const dia = isoDia(new Date()); const path = `atividade/${S.myId}/dias/${dia}`;
+    const item = { em: agora(), acao, texto: String(texto || "").slice(0, 300) };
+    for (const [k, v] of Object.entries(extra || {})) if (v !== undefined) item[k] = v;
+    emFila(path, async () => {
+      const ref = S.db.doc(path); const snap = await ref.get();
+      const itens = snap.exists ? [...(((snap.data() || {}).itens) || [])] : [];
+      const ult = itens[itens.length - 1];
+      if (acao === "editou" && ult && ult.acao === "editou" && ult.postId && ult.postId === item.postId && Date.now() - new Date(ult.em).getTime() < 10 * 60e3) {
+        const campos = [...new Set([...(ult.campos || []), ...(item.campos || [])])]; // edições seguidas do mesmo post viram uma linha
+        itens[itens.length - 1] = { ...ult, em: item.em, campos, texto: `editou ${listaPt(campos)} de “${item.titulo || ult.titulo || "um post"}”` };
+      } else {
+        if (acao === "editou") item.texto = `editou ${listaPt(item.campos || [])} de “${item.titulo || "um post"}”`;
+        itens.push(item);
+      }
+      if (itens.length > 1500) itens.splice(0, itens.length - 1500);
+      await ref.set({ quem: S.myId, dia, itens, atualizadoEm: agora() });
+    }).catch((e) => console.warn("atividade", e));
+  }
+  const ROT_CAMPOS = { titulo: "o título", ideia: "o roteiro", legenda: "a legenda", formato: "o formato", redes: "as redes", tags: "as tags", anexos: "os anexos",
+    referencias: "as referências", prazo: "o prazo", hora: "a hora", clienteId: "o cliente", contaId: "a conta" };
+  function registrarPost(antes, patch) {
+    const titulo = String(patch.titulo || antes.titulo || "Sem título").slice(0, 80); const t = `“${titulo}”`;
+    const base = { postId: antes.id, clienteId: (patch.clienteId !== undefined ? patch.clienteId : antes.clienteId) || null, titulo };
+    const k = Object.keys(patch); const a = patch.aprovacao;
+    if (k.includes("status")) {
+      const para = statusPost(patch.status).id;
+      if (para === "aprovado" && a && a.status === "aprovado") registrar("aprovou", `aprovou ${t}`, base);
+      else if (para === "revisao" && a && a.status === "pendente") registrar("pediu_aprovacao", `mandou ${t} para aprovação`, base);
+      else if (a && a.status === "ajustes") registrar("pediu_ajustes", `pediu ajustes em ${t}`, base);
+      else if (para === "arquivado") registrar("arquivou", `arquivou ${t}`, base);
+      else if (para === "publicado" && patch.midiaId) registrar("ligou_instagram", `marcou ${t} como publicado e ligou ao post do Instagram`, base);
+      else registrar("etapa", `moveu ${t} de ${statusPost(antes.status).nome} para ${statusPost(para).nome}`, { ...base, de: statusPost(antes.status).id, para });
+    } else if (k.includes("midiaId")) registrar("ligou_instagram", patch.midiaId ? `ligou ${t} ao post do Instagram` : `desligou ${t} do post do Instagram`, base);
+    if (k.includes("data")) registrar("data", patch.data ? `marcou ${t} para ${dataCurta(patch.data)}${patch.hora ? " às " + patch.hora : ""}` : `tirou a data de ${t}`, base);
+    if (k.includes("responsavel")) registrar("responsavel", patch.responsavel ? `definiu quem cuida de ${t}:` : `tirou o responsável de ${t}`, { ...base, pessoa: patch.responsavel || null });
+    if (k.includes("projetoId") && patch.projetoId) registrar("video", `começou a edição de vídeo de ${t}`, base);
+    const campos = k.filter((x) => ROT_CAMPOS[x] && !(x === "hora" && k.includes("data")) && !(x === "contaId" && k.includes("clienteId")) && !(x === "anexos" && false));
+    if (campos.length) registrar("editou", "", { ...base, campos: campos.map((x) => ROT_CAMPOS[x]) });
+  }
+  function registrarProjeto(pr, campos) {
+    const p = pr.postId ? postPorId(pr.postId) : null; const titulo = String((p && p.titulo) || pr.titulo || "Sem título").slice(0, 80); const t = `“${titulo}”`;
+    const base = { postId: p ? p.id : null, clienteId: (p && p.clienteId) || pr.clienteId || null, titulo };
+    if (campos.status && campos.status !== pr.status) {
+      const de = pr.status, para = campos.status;
+      registrar("video", de === "storyboard" && para === "editando" ? `aprovou o storyboard de ${t}` : para === "pronto" ? `aprovou o vídeo de ${t}`
+        : de === "revisao" && para === "editando" ? `pediu ajustes no vídeo de ${t}` : `mudou a etapa do vídeo de ${t} para ${(STATUS.find((x) => x.id === para) || {}).nome || para}`, base);
+    }
+    if (campos.estiloId !== undefined && campos.estiloId !== pr.estiloId) registrar("video", `mudou o estilo de edição de ${t}`, base);
+  }
+  async function marcarAcesso() { // uma vez por dia: a dona vê quando cada pessoa abriu a Central
+    if (!S.db || !S.myId || !S.canWrite) return;
+    const ref = S.db.doc("atividade/" + S.myId); const hoje = isoDia(new Date());
+    try { const snap = await ref.get(); if (!snap.exists || (snap.data() || {}).dia !== hoje) await emFila("atividade/" + S.myId, () => ref.set({ quem: S.myId, dia: hoje, ultimoAcesso: agora() })); }
+    catch (e) { console.warn("acesso", e); }
+  }
+  const at = { usuarios: [], subUsuarios: null, subs: new Map(), dias: new Map(), periodo: 7, pessoa: "", iniciado: false, limite: 200 };
+  function iniciarAtividade() {
+    if (at.iniciado || !S.db || !S.myId) return; at.iniciado = true;
+    if (S.isOwner) at.subUsuarios = S.db.collection("atividade").onSnapshot((snap) => {
+      at.usuarios = snap.docs.map((d) => ({ id: d.id, ...d.data() })); assinarDias(); renderAtividade();
+    }, (e) => console.warn("atividade", e));
+    else { at.usuarios = [{ id: S.myId }]; assinarDias(); }
+  }
+  function assinarDias() {
+    const desde = isoDia(somaDias(new Date(), -(at.periodo - 1)));
+    const ids = (S.isOwner ? at.usuarios.map((u) => u.id) : [S.myId]).filter(Boolean);
+    const chave = (id) => id + "|" + desde;
+    for (const [k, un] of [...at.subs]) if (!ids.some((id) => chave(id) === k)) { un(); at.subs.delete(k); at.dias.delete(k.split("|")[0]); }
+    for (const id of ids) {
+      if (at.subs.has(chave(id))) continue;
+      at.subs.set(chave(id), S.db.collection(`atividade/${id}/dias`).where("dia", ">=", desde).onSnapshot((snap) => {
+        at.dias.set(id, snap.docs.map((d) => ({ id: d.id, ...d.data() }))); renderAtividade();
+      }, (e) => console.warn("atividade dias", e)));
+    }
+  }
+  async function opcoesAtividade() {
+    const sel = $("#at-pessoa"); const ids = at.usuarios.map((u) => u.id);
+    const ps = S.user && ids.length ? await S.user.profiles(ids) : {};
+    const itens = [["", "Todas as pessoas"], ...ids.map((id) => [id, nomePessoa(ps[id])])];
+    const assin = JSON.stringify(itens);
+    if (sel.dataset.assin !== assin) { sel.replaceChildren(...itens.map(([v, t]) => h("option", { value: v }, t))); sel.dataset.assin = assin; }
+    sel.value = at.pessoa || "";
+  }
+  function rotuloDia(k) { const hoje = isoDia(new Date()); return k === hoje ? "Hoje" : k === isoDia(somaDias(new Date(), -1)) ? "Ontem" : capitaliza(dataLonga(k)); }
+  function renderAtividade() {
+    const dono = S.isOwner;
+    $("#at-titulo").textContent = dono ? "Atividade da equipe" : "Seu histórico";
+    $("#at-dica").textContent = !S.db ? "Abra a Central no claude.ai para ver a atividade." : dono
+      ? "Tudo o que cada pessoa faz na Central fica registrado aqui. Cada uma grava o próprio histórico; ninguém consegue mudar ou apagar o registro de outra pessoa, nem você. Só você vê a atividade de todo mundo."
+      : "O que você fez na Central. A dona da Central vê a atividade de toda a equipe.";
+    $("#at-pessoa").hidden = !dono;
+    if (S.aba !== "atividade") return; // só carrega quando alguém abre a área
+    iniciarAtividade();
+    if (dono) opcoesAtividade();
+    const el = $("#at-lista");
+    if (!at.iniciado) { poe(el, h("div", { class: "empty" }, h("strong", null, "Carregando…"), "Buscando o histórico.")); return; }
+    let itens = [];
+    for (const [uid, dias] of at.dias) { if (at.pessoa && uid !== at.pessoa) continue; for (const d of dias) for (const it of d.itens || []) itens.push({ ...it, quem: d.quem || uid }); }
+    itens = itens.filter((it) => noEscopo(it.clienteId)).sort((a, b) => (b.em || "").localeCompare(a.em || ""));
+    // resumo por pessoa (só a dona)
+    const box = $("#at-pessoas");
+    if (dono && !at.pessoa) {
+      poe(box, ...at.usuarios.map((u) => {
+        const meus = itens.filter((it) => it.quem === u.id);
+        return h("div", { class: "queda" }, pessoa(u.id, false), h("b", null, meus.length === 1 ? "1 ação" : `${meus.length} ações`),
+          h("span", { class: "hint" }, meus.length ? "última " + quando(meus[0].em) : u.dia ? "abriu a Central em " + dataCurta(u.dia) : "sem ações no período"));
+      }));
+      resolverPessoas(box);
+    } else poe(box);
+    if (!itens.length) { poe(el, h("div", { class: "empty" }, h("strong", null, "Nada registrado no período"), dono ? "As ações aparecem aqui assim que alguém usar a Central." : "As suas ações aparecem aqui.")); return; }
+    const grupos = new Map();
+    for (const it of itens.slice(0, at.limite)) { const k = isoDia(new Date(it.em)); if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(it); }
+    poe(el, ...[...grupos].map(([k, l]) => h("section", { class: "at-dia", "aria-label": rotuloDia(k) }, h("h3", null, rotuloDia(k)),
+      l.map((it) => h("div", { class: "at-item", role: it.postId ? "button" : null, tabindex: it.postId ? "0" : null, "data-id": it.postId || null },
+        h("span", { class: "hr" }, new Date(it.em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })),
+        pessoa(it.quem, false), h("span", { class: "at-tx" }, it.texto || it.acao), it.pessoa ? pessoa(it.pessoa, false) : null,
+        !S.cli && it.clienteId ? marcaCliente(it.clienteId) : null)))),
+      itens.length > at.limite ? h("button", { class: "btn ghost", type: "button", onclick: () => { at.limite += 200; renderAtividade(); } }, `Mostrar mais (${itens.length - at.limite})`) : null);
+    resolverPessoas(el);
+  }
+  $("#at-periodo").addEventListener("change", (ev) => { at.periodo = Number(ev.target.value) || 7; at.limite = 200; if (at.iniciado) assinarDias(); renderAtividade(); });
+  $("#at-pessoa").addEventListener("change", (ev) => { at.pessoa = ev.target.value; at.limite = 200; renderAtividade(); });
+
   // ---------- CONFIGURAÇÕES: clientes, contas e equipe ----------
   function salvarCliente(id, campos) {
     if (!S.db) return toast("Abra a Central no claude.ai para salvar.");
-    emFila("clientes/" + id, () => S.db.doc("clientes/" + id).update(campos)).then(() => toast("Cliente atualizado"), (e) => { console.error(e); toast(erroMsg(e)); });
+    emFila("clientes/" + id, () => S.db.doc("clientes/" + id).update(campos)).then(() => { toast("Cliente atualizado");
+      registrar("cliente", `alterou ${listaPt(Object.keys(campos).map((k) => ({ nome: "o nome", cor: "a cor", nicho: "o nicho", ativo: "a situação" })[k] || k))} do cliente ${campos.nome || nomeCliente(id)}`, { clienteId: id }); }, (e) => { console.error(e); toast(erroMsg(e)); });
   }
   function renderConfig() {
     renderConfigContas();
@@ -3174,7 +3341,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       const ref = await S.db.collection("clientes").add({ nome: "Novo cliente", cor: CORES_CLIENTE[n % CORES_CLIENTE.length], nicho: "", estiloId: null, ativo: true, ordem: n });
       id = ref.id;
     });
-    if (ok) { toast("Cliente criado. Dê um nome a ele."); setTimeout(() => { const el = document.getElementById("cfg-nome-" + id); if (el) { el.focus(); el.select(); } }, 400); }
+    if (ok) { registrar("cliente", "criou um cliente novo", { clienteId: id }); toast("Cliente criado. Dê um nome a ele."); setTimeout(() => { const el = document.getElementById("cfg-nome-" + id); if (el) { el.focus(); el.select(); } }, 400); }
   });
   function renderEquipe() {
     const box = $("#cfg-equipe"); const ids = idsTime();
@@ -3192,7 +3359,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     renderSeletorCliente();
     const rc = $("#r-cliente"); opcoesClientes(rc, rc.value || clienteEmFoco() || "", "Todos os clientes");
     selectEstilos($("#r-estilo"), $("#r-estilo").value, true, clienteEmFoco());
-    renderInicio(); renderCalendario(); renderIdeias(); renderProducao(); renderPainel(); renderRelatorios(); renderListaEstilos(); renderRefs(); renderConfig();
+    renderInicio(); renderCalendario(); renderIdeias(); renderProducao(); renderPainel(); renderRelatorios(); renderAtividade(); renderListaEstilos(); renderRefs(); renderConfig();
     if (!S.rascunho && S.loaded.estilos) { const vis = estilosNoEscopo(); if (vis.length) selecionarEstilo((vis.find((e) => e.padrao && e.clienteId === clienteEmFoco()) || vis.find((e) => e.padrao) || vis[0]).id); }
   }
   function assinar(nome, chave) {
@@ -3226,6 +3393,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     assinar("estilos", "estilos"); assinar("referencias", "refs"); assinar("projetos", "projetos"); assinar("posts", "posts");
     assinar("contas", "contas"); assinar("analises", "analises"); assinar("config", "config"); assinar("clientes", "clientes"); assinar("relatorios", "relatorios");
     if (user) { try { S.isOwner = !!(await user.isOwner()); } catch { S.isOwner = false; } }
+    marcarAcesso(); renderAtividade();
     // Claude pela página (análise): pede licença no primeiro uso
     C.use("sample").then((sample) => { S.pn.sample = sample; renderTudo(); }, () => {});
     // Conectores pela página: Pipeboard (números) e Claude Code Remote (busca de assuntos em alta).
