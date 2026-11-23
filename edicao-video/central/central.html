@@ -1238,8 +1238,13 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   const pedidoDaConta = (tipo, cid) => (p) => p.tipo === tipo && p.contaId === cid;
   const pedidoDoCliente = (tipo, cid) => (p) => p.tipo === tipo && p.clienteId === cid && !p.contaId;
   const pedeNaFila = () => !S.isOwner; // a dona usa o Claude na hora; as outras pessoas pedem pela fila
+  // Link da sessão do Claude que está fazendo o pedido (fica na conta da dona: só ela consegue abrir)
+  const linkSessao = (p) => (p && typeof p.sessao === "string" && /^https:\/\/claude\.ai\/code\/[\w-]{1,80}$/.test(p.sessao) ? p.sessao : null);
   function textoEspera(p) {
-    if (p.status === "em_andamento" && !travado(p)) return "O Claude está fazendo agora" + (p.iniciadoEm ? " (começou " + quando(p.iniciadoEm) + ")." : ".");
+    if (p.status === "em_andamento" && !travado(p)) {
+      const passo = typeof p.progresso === "string" && p.progresso.trim() ? p.progresso.trim().slice(0, 120).replace(/[.…]+$/, "") : null;
+      return "O Claude está fazendo agora" + (passo ? ": " + passo.charAt(0).toLowerCase() + passo.slice(1) + "." : ".") + (p.iniciadoEm ? " Começou " + quando(p.iniciadoEm) + "." : "");
+    }
     return gatilhoFila() ? `Na fila do Claude. Começa ${rotuloRodada()}.` : "Na fila do Claude. A tarefa que processa a fila ainda não foi ligada pela dona da Central.";
   }
   const limpo = (x) => (x == null ? null : JSON.parse(JSON.stringify(x))); // o banco não aceita undefined
@@ -1307,6 +1312,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
         p.status === "feito" && p.resultado && p.tipo !== "relatorio" ? h("p", { class: "hint", style: "margin:0" }, String(p.resultado).slice(0, 200)) : null),
       h("div", { class: "pd-acoes" },
         abrir ? h("button", { class: "btn ghost", type: "button", onclick: abrir }, "Abrir") : null,
+        S.isOwner && linkSessao(p) ? h("a", { class: "btn ghost", href: linkSessao(p), target: "_blank", rel: "noopener noreferrer", title: "Abre a sessão do Claude que fez este pedido" }, p.status === "em_andamento" ? "Ver ao vivo ↗" : "Ver sessão ↗") : null,
         podeCancelar ? h("button", { class: "btn ghost", type: "button", onclick: (ev) => cancelarPedido(p, ev.currentTarget) }, "Cancelar") : null));
   }
   function renderFila() {
@@ -1452,7 +1458,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     assinarNotas(pid);
     const pr = pid ? S.projetos.find((x) => x.id === pid) : null;
     $("#fv-nota").hidden = !(pr && S.canWrite && S.db);
-    const pedV = pid ? S.pedidos.filter(pedidoDoProjeto(pid)).map((x) => [x.id, x.status, x.iniciadoEm, x.erro]) : [];
+    const pedV = pid ? S.pedidos.filter(pedidoDoProjeto(pid)).map((x) => [x.id, x.status, x.iniciadoEm, x.erro, x.progresso, x.sessao]) : [];
     const assin = JSON.stringify([pid, pr && [pr.status, pr.estiloId, pr.storyboard, pr.storyboardResumo, pr.versoes, pr.briefing, pr.titulo, pr.bruto], fv.notas, S.canWrite, S.loaded.projetos,
       pedV, fv.enviando, !!S.assets, !!S.downloads, S.isOwner, S.pn.podeBuscar, gatilhoFila(), rotuloRodada(), S.myId,
       S.estilos.map((e) => [e.id, e.nome, e.clienteId, e.padrao]), p.clienteId, p.titulo]);
@@ -1509,8 +1515,13 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     // Situação do pedido deste vídeo na fila do Claude
     const ped = pedidoAtivo(pedidoDoProjeto(pr.id)); const ult = ultimoPedido(pedidoDoProjeto(pr.id));
     let filaEl = null;
+    const vem = pr.status === "editando" ? ((pr.versoes || []).length ? "a nova versão" : "a versão 1") : "o storyboard";
+    const ondeTx = ped && ped.status === "em_andamento" && !travado(ped)
+      ? `Ele trabalha numa sessão do Claude na nuvem, ${S.isOwner ? "na sua conta" : "na conta da dona da Central"}. ${capitaliza(vem)} vai aparecer aqui assim que terminar.`
+      : `Na hora marcada, o Claude abre uma sessão na nuvem ${S.isOwner ? "na sua conta" : "na conta da dona da Central"} e faz ${vem}. O resultado aparece aqui sozinho.`;
     if (ped) filaEl = h("div", { class: "fila-aviso", role: "status" }, icone(ped.status === "em_andamento" && !travado(ped) ? "filme" : "relogio"),
-      h("span", null, textoEspera(ped), ped.instrucoes ? h("small", { class: "pd-recado" }, "Recado: “" + String(ped.instrucoes).slice(0, 300) + "”") : null),
+      h("span", null, textoEspera(ped), h("small", { class: "pd-recado" }, ondeTx), ped.instrucoes ? h("small", { class: "pd-recado" }, "Recado: “" + String(ped.instrucoes).slice(0, 300) + "”") : null),
+      S.isOwner && linkSessao(ped) ? h("a", { class: "link-acao", href: linkSessao(ped), target: "_blank", rel: "noopener noreferrer" }, "Ver o Claude trabalhando ↗") : null,
       S.isOwner && S.pn.podeBuscar && gatilhoFila() && (ped.status === "aguardando" || travado(ped)) ? h("button", { class: "link-acao", type: "button", onclick: (ev) => processarFila(ev.currentTarget) }, "Processar agora") : null,
       ped.status === "aguardando" && S.canWrite && (ped.por === S.myId || S.isOwner) ? h("button", { class: "link-acao", type: "button", onclick: (ev) => cancelarPedido(ped, ev.currentTarget) }, "Cancelar") : null);
     else if (ult && ult.status === "erro") filaEl = h("div", { class: "fila-aviso erro", role: "status" }, icone("alerta"), h("span", null, "O Claude não conseguiu: " + String(ult.erro || "motivo não informado").slice(0, 240)),

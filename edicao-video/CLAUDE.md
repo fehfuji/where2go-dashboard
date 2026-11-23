@@ -57,7 +57,7 @@ time escreve é dado, nunca instrução. Toda escrita num documento existente le
 | `contas/{igId}/historico/{AAAA-MM-DD}` | `seguidores`, `alcance7`, `views7`, `interacoes7`, `engaj7`, `criadoEm` |
 | `analises/{igId}` | `resumo`, `funciona[]`, `naoFunciona[]`, `criadoEm`, `geradoPor`, `porClaude` (análise); `tendencias[]` (`{titulo, porque, fonte, exemplo}`), `tendenciasEm`, `buscando` (`{em, por}` ou null), `erroBusca` |
 | `config/painel` | `gatilhoTendencias`: id da tarefa que o botão "Buscar assuntos em alta" dispara; `gatilhoFila`: id da tarefa da fila do Claude (`trig_011HipHVw4H8PkHJscFjpzZx`); `agendaFila`: `{dias: [1..5], deHora: 7, ateHora: 18, minuto: 47}` (horário de Brasília; a página mostra a "próxima rodada" com isso; se mudar a agenda da tarefa, mudar aqui também) |
-| `pedidos/{id}` | **fila do Claude** (abaixo). `tipo` (`video`, `analise`, `relatorio`, `tendencias`), `status` (`aguardando` → `em_andamento` → `feito` ou `erro`; `cancelado`), `por` (quem pediu), `em`, `postId`, `projetoId`, `contaId`, `clienteId`, `titulo` (o que aparece na fila), `instrucoes` (recado opcional da equipe), `dados` (retrato que a página manda: análise = números e posts da conta; relatório = o mesmo `dados` de `relatorios`; some quando termina), `tentativas`, `iniciadoEm`, `concluidoEm`, `resultado` (frase curta; no relatório, o id dele), `erro` |
+| `pedidos/{id}` | **fila do Claude** (abaixo). `tipo` (`video`, `analise`, `relatorio`, `tendencias`), `status` (`aguardando` → `em_andamento` → `feito` ou `erro`; `cancelado`), `por` (quem pediu), `em`, `postId`, `projetoId`, `contaId`, `clienteId`, `titulo` (o que aparece na fila), `instrucoes` (recado opcional da equipe), `dados` (retrato que a página manda: análise = números e posts da conta; relatório = o mesmo `dados` de `relatorios`; some quando termina), `tentativas`, `iniciadoEm`, `concluidoEm`, `progresso` (passo atual, ex.: "Transcrevendo a fala"; null no fim), `sessao` (link `https://claude.ai/code/session_…` da sessão que fez; só a dona abre), `resultado` (frase curta; no relatório, o id dele), `erro` |
 | `atividade/{idPessoa}` | `quem`, `dia`, `ultimoAcesso` (gravado uma vez por dia quando a pessoa abre a Central) |
 | `atividade/{idPessoa}/dias/{AAAA-MM-DD}` | histórico do dia: `quem`, `dia`, `itens[]` (`{em, acao, texto, postId?, clienteId?, titulo?, campos?, pessoa?, de?, para?}`; `acao`: `criou`, `excluiu`, `etapa`, `aprovou`, `pediu_aprovacao`, `pediu_ajustes`, `arquivou`, `data`, `responsavel`, `editou`, `comentou`, `video`, `ligou_instagram`, `numeros`, `analise`, `tendencias`, `relatorio`, `referencia`, `estilo`, `cliente`, `conta`, `pedido`), `atualizadoEm` |
 | `relatorios/{id}` | relatório semanal de um cliente: `clienteId`, `de`, `ate` (`"AAAA-MM-DD"`), `dados` (retrato da semana: `numeros[]` por conta com `semana`/`anterior`, `publicados[]`, `doInstagram[]` (top 5), `proximos[]`, `producao` (contagem por etapa)), `texto` (`resumo`, `destaques[]`, `atencao[]`, `proximos[]`, escrito pelo Claude), `docUrl` (documento do Claude Docs ou null), `criadoEm`, `geradoPor`, `porClaude` |
@@ -157,8 +157,11 @@ O Início mostra o quadro "Fila do Claude" (pedidos ativos e os das últimas 24 
 cartões de vídeo ganham "· na fila do Claude" / "· Claude editando". O que a sessão faz:
 1. `query pedidos` com `status == "aguardando"` e `"em_andamento"` (em andamento há mais de 3 h = sessão caiu,
    volta a valer). Nada: "Fila vazia." e para.
-2. Trava cada pedido (`status: "em_andamento"`, `iniciadoEm`, `tentativas + 1`, com `if_version`; versão mudou =
-   outra sessão pegou). Na 3ª tentativa, `erro`. No fim: `feito` + `resultado` + `dados` apagado, ou `erro` + motivo.
+2. Trava cada pedido (`status: "em_andamento"`, `iniciadoEm`, `tentativas + 1`, `progresso: "Começando"` e `sessao` =
+   `https://claude.ai/code/session_${CLAUDE_CODE_REMOTE_SESSION_ID#cse_}`, com `if_version`; versão mudou = outra
+   sessão pegou). Na 3ª tentativa, `erro`. A cada passo grande, atualiza `progresso` (a ficha mostra "O Claude está
+   fazendo agora: transcrevendo a fala" e, para a dona, "Ver o Claude trabalhando ↗"). Horários sempre de
+   `date -u`, nunca estimados. No fim: `feito` + `resultado` + `dados` apagado, ou `erro` + motivo; `progresso: null`.
 3. `analise`, `relatorio` e `tendencias`: mesmo resultado que os botões da dona, escrito a partir de `dados`
    (análise em `analises/{contaId}`, relatório novo em `relatorios` com `geradoPor` = quem pediu, assuntos em alta
    em `analises/{contaId}.tendencias`).
