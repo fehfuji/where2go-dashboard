@@ -1,10 +1,10 @@
-<title>Central de Edição Where2Go</title>
+<title>Central Where2Go</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Montserrat:wght@600;700;800&family=Space+Grotesk:wght@500;700&display=swap">
 <style>
-/* Layout: app de trabalho — cabeçalho fixo com abas; cada aba é uma área (fila de projetos, estilos com prévia de celular, biblioteca de referências) */
+/* Layout: painel de social media — cabeçalho com o cliente em foco; navegação na ordem do trabalho (Início → Calendário → Ideias → Produção → Desempenho), lateral no computador e embaixo no celular */
 :root {
   --bg: #F2F5F6;
   --surface: #FFFFFF;
@@ -27,12 +27,15 @@
   --font-video: "Montserrat", "Inter", system-ui, sans-serif;
   --radius: 10px;
   /* Status dos posts do calendário (seguem as cores das etapas dos projetos, nos dois temas) */
+  --st-agendado: #A63F78;
   --ps-ideia: var(--st-bruto);
   --ps-roteiro: var(--st-storyboard);
   --ps-producao: var(--st-editando);
-  --ps-pronto: var(--st-pronto);
-  --ps-agendado: var(--st-revisao);
+  --ps-revisao: var(--st-revisao);
+  --ps-aprovado: var(--st-pronto);
+  --ps-agendado: var(--st-agendado);
   --ps-publicado: var(--accent);
+  --ps-arquivado: var(--muted);
   /* Variação no Painel: subiu / caiu (sempre com seta e texto, nunca só a cor) */
   --bom: var(--st-pronto);
   --ruim: var(--danger);
@@ -41,14 +44,14 @@
   :root:not([data-theme="light"]) {
     --bg: #0C1316; --surface: #131D21; --surface-2: #1A262B; --line: #2A393F; --ink: #E3ECEE; --muted: #92A3AA;
     --accent: #43C2CE; --accent-ink: #062529; --accent-soft: #163539;
-    --st-bruto: #95A4AA; --st-storyboard: #82A6F2; --st-editando: #E2AC4E; --st-revisao: #B597F0; --st-pronto: #53C686;
+    --st-bruto: #95A4AA; --st-storyboard: #82A6F2; --st-editando: #E2AC4E; --st-revisao: #B597F0; --st-pronto: #53C686; --st-agendado: #E68DBA;
     --danger: #F07D69; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0C1316; --surface: #131D21; --surface-2: #1A262B; --line: #2A393F; --ink: #E3ECEE; --muted: #92A3AA;
   --accent: #43C2CE; --accent-ink: #062529; --accent-soft: #163539;
-  --st-bruto: #95A4AA; --st-storyboard: #82A6F2; --st-editando: #E2AC4E; --st-revisao: #B597F0; --st-pronto: #53C686;
+  --st-bruto: #95A4AA; --st-storyboard: #82A6F2; --st-editando: #E2AC4E; --st-revisao: #B597F0; --st-pronto: #53C686; --st-agendado: #E68DBA;
   --danger: #F07D69; color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -61,7 +64,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* Cabeçalho */
 .top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
-.top .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; padding-block: 12px; }
+.top .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding-block: 12px; max-width: 1400px; }
 .brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; min-width: 0; }
 .brand small { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
 .brand h1 { font-size: 20px; }
@@ -344,14 +347,14 @@ table.fmt { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .bar-linha { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
 .bar { height: 8px; border-radius: 0 4px 4px 0; background: var(--accent); min-width: 2px; }
 .tops { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.top { display: grid; grid-template-columns: 22px auto minmax(0, 1fr); gap: 4px 10px; padding: 10px 12px; background: var(--bg); border-radius: 8px; align-items: start; }
-.top .pos { font-family: var(--font-mono); font-size: 12px; color: var(--muted); padding-top: 2px; font-variant-numeric: tabular-nums; }
-.top > .ic { color: var(--muted); margin-top: 1px; width: 17px; height: 17px; }
-.top p { margin: 0; font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
-.top .nums, .top .rod { grid-column: 3; display: flex; flex-wrap: wrap; gap: 3px 12px; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.top .nums b { color: var(--ink); font-weight: 600; }
-.top .nums .em b { color: var(--accent); }
-.top a { color: var(--accent); }
+.toppost { display: grid; grid-template-columns: 22px auto minmax(0, 1fr); gap: 4px 10px; padding: 10px 12px; background: var(--bg); border-radius: 8px; align-items: start; }
+.toppost .pos { font-family: var(--font-mono); font-size: 12px; color: var(--muted); padding-top: 2px; font-variant-numeric: tabular-nums; }
+.toppost > .ic { color: var(--muted); margin-top: 1px; width: 17px; height: 17px; }
+.toppost p { margin: 0; font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.toppost .nums, .toppost .rod { grid-column: 3; display: flex; flex-wrap: wrap; gap: 3px 12px; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.toppost .nums b { color: var(--ink); font-weight: 600; }
+.toppost .nums .em b { color: var(--accent); }
+.toppost a { color: var(--accent); }
 .tend { display: grid; gap: 4px; padding: 10px 12px; border-radius: 8px; background: var(--bg); min-width: 0; }
 .tend b { font-size: 14.5px; overflow-wrap: anywhere; }
 .tend p { margin: 0; font-size: 13.5px; color: var(--muted); overflow-wrap: anywhere; }
@@ -368,6 +371,92 @@ table.geral { width: 100%; border-collapse: collapse; font-size: 13.5px; min-wid
 .cfg-conta label { display: flex; gap: 8px; align-items: center; font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
 .cfg-conta input[type="text"] { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 7px 10px; }
 @media (max-width: 520px) { .cfg-conta { grid-template-columns: minmax(0, 1fr); } }
+
+/* Estrutura — cliente em foco no topo; navegação lateral (computador) ou barra fixa embaixo (celular) */
+.cli-sel select { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 7px 14px; font-weight: 600; font-size: 14px; max-width: 100%; min-width: 0; cursor: pointer; }
+.app { display: grid; grid-template-columns: 196px minmax(0, 1fr); align-items: start; max-width: 1400px; margin: 0 auto; }
+.app > main { min-width: 0; width: 100%; max-width: 1180px; margin: 0; }
+.nav { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 62px); display: grid; gap: 2px; padding-block: 18px; padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: 4px; }
+.nav a, .nav-mais, .mais-menu a { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; color: var(--muted); text-decoration: none; font-weight: 500; font-size: 14.5px; border: 0; background: none; cursor: pointer; text-align: left; }
+.nav a:hover, .mais-menu a:hover { color: var(--ink); background: var(--surface-2); }
+.nav a[aria-current="page"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 0.1); }
+.nav a[aria-current="page"] .ic { color: var(--accent); }
+.nav a.primeiro { margin-top: 14px; }
+.nav-mais { display: none; }
+.mais-menu { display: none; }
+@media (max-width: 860px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .app > main { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+  .nav { position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 8; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; background: var(--surface); border-top: 1px solid var(--line);
+    padding-block: 4px calc(4px + env(safe-area-inset-bottom, 0px)); padding-left: max(2px, env(safe-area-inset-left, 0px)); padding-right: max(2px, env(safe-area-inset-right, 0px)); }
+  .nav a, .nav-mais { flex-direction: column; justify-content: center; align-items: center; gap: 2px; padding: 6px 0; min-height: 54px; font-size: 10.5px; letter-spacing: -0.01em; text-align: center; border-radius: 10px; min-width: 0; }
+  .nav a span, .nav-mais span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nav a.sec { display: none; }
+  .nav-mais { display: flex; }
+  .nav a[aria-current="page"], .nav-mais[aria-current="page"] { background: transparent; box-shadow: none; color: var(--accent); }
+  .nav-mais[aria-current="page"] .ic { color: var(--accent); }
+  .mais-menu:not([hidden]) { display: grid; position: fixed; z-index: 9; right: max(8px, env(safe-area-inset-right, 0px)); bottom: calc(68px + env(safe-area-inset-bottom, 0px)); min-width: 210px; padding: 6px; gap: 2px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgb(0 0 0 / 0.2); }
+  .toast { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (max-width: 560px) {
+  .cli-sel { order: 3; flex: 1 1 100%; }
+  .cli-sel select { width: 100%; }
+  .me span { display: none; }
+}
+.cdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--cor, var(--muted)); box-shadow: 0 0 0 2px var(--surface); }
+.cli-nome { display: inline-flex; align-items: center; gap: 5px; }
+
+/* Início */
+.inicio-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+@media (max-width: 900px) { .inicio-grid { grid-template-columns: minmax(0, 1fr); } }
+.lista-mini { display: grid; gap: 6px; min-width: 0; }
+.mini { --c: var(--ps-ideia); display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; padding: 9px 11px; border-radius: 8px; background: var(--bg); border-left: 3px solid var(--c); cursor: pointer; text-align: left; min-width: 0; }
+.mini > .ic { color: var(--c); width: 17px; height: 17px; }
+.mini b { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; line-height: 1.35; }
+.mini small { grid-column: 2 / -1; font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; }
+.mini .quando { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mini .quando.atraso { color: var(--danger); }
+.queda { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 9px 11px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); font-size: 13.5px; }
+.queda b { font-weight: 600; }
+.queda > .ic { color: var(--ruim); width: 16px; height: 16px; }
+
+/* Produção — uma coluna por etapa no computador; no celular, grupos empilhados */
+.etapas { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; align-items: start; }
+@media (max-width: 720px) { .etapas { grid-template-columns: minmax(0, 1fr); } }
+.etapa { --c: var(--muted); background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--c); border-radius: var(--radius); padding: 10px; display: grid; gap: 8px; min-width: 0; }
+.etapa-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 2px 4px; }
+.etapa-cab b { font-family: var(--font-display); font-size: 15px; }
+.etapa-cab span { font-family: var(--font-mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.etapa .pcard { background: var(--bg); }
+.etapa .hint { padding: 0 4px; }
+.vchip { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 6px; color: var(--c2); background: color-mix(in srgb, var(--c2) 12%, transparent); white-space: nowrap; }
+.vchip .ic { width: 12px; height: 12px; }
+.prazo { font-family: var(--font-mono); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.prazo.atraso { color: var(--danger); font-weight: 600; }
+
+/* Ideias */
+.rapida { flex-wrap: wrap; }
+.rapida select { flex: 1 1 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+.triagem { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.triagem .btn { padding: 5px 10px; font-size: 13px; }
+
+/* Configurações */
+.cfg-cliente { display: grid; grid-template-columns: auto minmax(140px, 1fr) minmax(0, 1.6fr) auto; gap: 8px 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.cfg-cliente input[type="color"] { width: 34px; height: 34px; border: 0; padding: 0; background: none; cursor: pointer; }
+.cfg-cliente input[type="text"] { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 7px 10px; min-width: 0; }
+.cfg-cliente label { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.cfg-cliente .hint { grid-column: 2 / -1; }
+@media (max-width: 620px) { .cfg-cliente { grid-template-columns: auto minmax(0, 1fr); } .cfg-cliente > :nth-child(3), .cfg-cliente > :nth-child(4) { grid-column: 2; } }
+.cfg-conta select { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 7px 10px; }
+.equipe { display: grid; gap: 8px; }
+.equipe .who { font-size: 14px; }
+.equipe .linha { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 8px 0; border-top: 1px solid var(--line); }
+
+/* Edição de vídeo dentro da ficha */
+#f-video .cab-sec { align-items: center; }
+#f-video .video-sel { display: flex; flex-wrap: wrap; gap: 8px 12px; }
+#f-video .video-sel .field { flex: 1 1 160px; }
 
 /* Ficha do post — gaveta à direita no computador, tela cheia no celular */
 html.trava { overflow: hidden; }
@@ -437,240 +526,288 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
 
 <header class="top">
   <div class="wrap">
-    <div class="brand"><small>Where2Go</small><h1>Central de Edição</h1></div>
-    <nav class="tabs" aria-label="Seções">
-      <a href="#projetos" data-tab="projetos">Projetos</a>
-      <a href="#calendario" data-tab="calendario">Calendário</a>
-      <a href="#painel" data-tab="painel">Painel</a>
-      <a href="#estilos" data-tab="estilos">Estilos</a>
-      <a href="#referencias" data-tab="referencias">Referências</a>
-    </nav>
+    <div class="brand"><small>Where2Go</small><h1>Central</h1></div>
+    <label class="cli-sel"><span class="sr-only">Cliente em foco</span><select id="cli-sel" aria-label="Cliente em foco"><option value="">Todos os clientes</option></select></label>
     <div class="me" id="me" hidden></div>
   </div>
 </header>
 
-<main class="wrap">
-  <div class="banner" id="banner" hidden></div>
+<div class="app">
+  <nav class="nav" id="nav" aria-label="Seções">
+    <a href="#inicio" data-tab="inicio" data-ic="casa"><span>Início</span></a>
+    <a href="#calendario" data-tab="calendario" data-ic="calendario"><span>Calendário</span></a>
+    <a href="#ideias" data-tab="ideias" data-ic="nenhum"><span>Ideias</span></a>
+    <a href="#producao" data-tab="producao" data-ic="quadro"><span>Produção</span></a>
+    <a href="#desempenho" data-tab="desempenho" data-ic="grafico"><span>Desempenho</span></a>
+    <a href="#biblioteca" data-tab="biblioteca" data-ic="ref" class="sec primeiro"><span>Biblioteca</span></a>
+    <a href="#config" data-tab="config" data-ic="engrenagem" class="sec"><span>Configurações</span></a>
+    <button type="button" class="nav-mais" id="nav-mais" data-ic="mais3" aria-expanded="false" aria-controls="mais-menu"><span>Mais</span></button>
+  </nav>
+  <div class="mais-menu" id="mais-menu" hidden>
+    <a href="#biblioteca" data-ic="ref"><span>Biblioteca</span></a>
+    <a href="#config" data-ic="engrenagem"><span>Configurações</span></a>
+  </div>
 
-  <!-- PROJETOS -->
-  <section id="tab-projetos" data-section="projetos">
-    <div class="section-head">
-      <div>
-        <h2>Projetos</h2>
-        <p>Cada vídeo da Where2Go, do bruto ao pronto. O Claude escreve o storyboard e posta as versões aqui; o time aprova e comenta no segundo exato do vídeo.</p>
-      </div>
-    </div>
-    <div class="pipeline" id="pipeline"></div>
-    <div class="proj-layout">
-      <div class="stack">
-        <details class="panel" id="novo-projeto">
-          <summary>Novo projeto</summary>
-          <form class="stack" id="form-projeto" style="margin-top:14px">
-            <label class="field"><span>Título</span><input type="text" id="np-titulo" required maxlength="120" placeholder="Ex.: 3 praias secretas perto de SP"></label>
-            <label class="field"><span>Estilo</span><select id="np-estilo"></select></label>
-            <label class="field"><span>Briefing</span><textarea id="np-briefing" maxlength="4000" placeholder="Assunto, destino, o que precisa aparecer, CTA final…"></textarea></label>
-            <div class="row"><button class="btn primary" type="submit" id="np-salvar">Criar projeto</button></div>
-          </form>
-        </details>
-        <div class="proj-list" id="proj-list"></div>
-      </div>
-      <div id="detail-wrap">
-        <div class="empty" id="detail-empty"><strong>Escolha um projeto</strong>Abra um projeto da lista para ver o storyboard, as versões e os comentários.</div>
-        <article class="panel detail stack" id="detail" hidden>
-          <div id="detail-body" class="stack"></div>
-          <form class="stack" id="form-nota">
-            <label class="field"><span>Comentário</span><textarea id="nota-texto" maxlength="2000" placeholder="O que mudar? Ex.: tira o zoom aqui, a legenda cobriu o rosto…"></textarea></label>
-            <div class="row" style="justify-content:space-between">
-              <label class="hint" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="nota-tempo" checked> Marcar no tempo do vídeo <span class="mono" id="nota-tempo-val"></span></label>
-              <button class="btn primary" type="submit" id="nota-enviar">Comentar</button>
-            </div>
-          </form>
-        </article>
-      </div>
-    </div>
-  </section>
+  <main class="wrap" id="main">
+    <div class="banner" id="banner" hidden></div>
 
-  <!-- CALENDÁRIO -->
-  <section id="tab-calendario" data-section="calendario" hidden>
-    <div class="section-head">
-      <div>
-        <h2>Calendário</h2>
-        <p>As ideias de post da Where2Go, do rascunho ao publicado. Guarde a ideia na caixa, abra a ficha para escrever o roteiro e a legenda e leve o post para um dia do calendário.</p>
-      </div>
-    </div>
-    <details class="filtros" id="cal-filtros">
-      <summary class="btn">Filtros <span class="chip" id="cal-filtros-n" hidden></span></summary>
-      <div class="filtros-corpo">
-        <div class="st-filtros" id="cal-status" role="group" aria-label="Filtrar por status"></div>
-        <div class="sel-filtros">
-          <select id="fl-rede" aria-label="Filtrar por rede">
-            <option value="">Todas as redes</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option>
-          </select>
-          <select id="fl-formato" aria-label="Filtrar por formato">
-            <option value="">Todos os formatos</option><option value="reels">Reels</option><option value="carrossel">Carrossel</option><option value="story">Story</option><option value="post">Post</option><option value="tiktok">TikTok</option><option value="_">Sem formato</option>
-          </select>
-          <select id="fl-resp" aria-label="Filtrar por responsável"><option value="">Todos os responsáveis</option></select>
-          <button class="btn ghost" type="button" id="fl-limpar" hidden>Limpar filtros</button>
-          <span class="hint" id="fl-info"></span>
+    <!-- INÍCIO -->
+    <section id="tab-inicio" data-section="inicio">
+      <div class="section-head">
+        <div>
+          <h2 id="in-titulo">Início</h2>
+          <p id="in-sub">O que precisa de atenção hoje e como foi a semana.</p>
         </div>
+        <button class="btn primary" type="button" id="in-novo" hidden>Novo conteúdo</button>
       </div>
-    </details>
-    <div class="cal-layout">
-      <aside class="panel caixa" id="caixa" aria-labelledby="caixa-titulo">
-        <h3 id="caixa-titulo">Caixa de ideias <span class="mono" id="ideias-n"></span></h3>
-        <form class="rapida" id="form-ideia">
-          <input type="text" id="ideia-titulo" maxlength="140" placeholder="Nova ideia de post…" aria-label="Título da nova ideia" autocomplete="off" enterkeyhint="done">
-          <button class="btn primary" type="submit" id="ideia-add">Guardar</button>
-        </form>
-        <div class="ideias" id="ideias"></div>
-      </aside>
-      <div class="stack" style="gap:10px;min-width:0">
-        <div class="cal-head">
-          <div class="cal-nav">
-            <button class="btn icone" type="button" id="cal-ant" aria-label="Mês anterior"></button>
-            <button class="btn" type="button" id="cal-hoje">Hoje</button>
-            <button class="btn icone" type="button" id="cal-prox" aria-label="Próximo mês"></button>
-            <h3 id="cal-titulo" aria-live="polite"></h3>
-          </div>
-          <p class="hint" id="cal-dica"></p>
-        </div>
-        <div id="cal-grade" class="mes"></div>
+      <div class="inicio-grid">
+        <section class="panel stack" aria-labelledby="in-at-t"><h3 id="in-at-t">Atrasados</h3><div class="lista-mini" id="in-atrasados"></div></section>
+        <section class="panel stack" aria-labelledby="in-hj-t"><div class="cab-sec"><h3 id="in-hj-t">Hoje e amanhã</h3><a class="link-acao" href="#calendario">Ver calendário</a></div><div class="lista-mini" id="in-hoje"></div></section>
+        <section class="panel stack" aria-labelledby="in-ap-t"><div class="cab-sec"><h3 id="in-ap-t">Esperando aprovação</h3><a class="link-acao" href="#producao">Ver produção</a></div><div class="lista-mini" id="in-aprovacao"></div></section>
+        <section class="panel stack" aria-labelledby="in-id-t"><div class="cab-sec"><h3 id="in-id-t">Ideias novas</h3><a class="link-acao" href="#ideias">Ver ideias</a></div><div class="lista-mini" id="in-ideias"></div></section>
       </div>
-    </div>
-  </section>
-
-  <!-- PAINEL -->
-  <section id="tab-painel" data-section="painel" hidden>
-    <div class="section-head">
-      <div>
-        <h2>Painel</h2>
-        <p>Os números do Instagram de cada conta: a última semana comparada com a anterior, o que está funcionando, os posts que mais renderam e os assuntos em alta, que viram ideias no Calendário.</p>
-      </div>
-      <div class="painel-acoes">
-        <span class="hint" id="pn-progresso" role="status"></span>
-        <button class="btn primary" type="button" id="pn-atualizar" hidden>Atualizar agora</button>
-      </div>
-    </div>
-    <div class="contas-sel" id="pn-contas" role="group" aria-label="Conta do Instagram"></div>
-    <p class="fonte" id="pn-fonte"></p>
-    <div class="kpis" id="pn-kpis"></div>
-    <div class="painel-grid">
-      <section class="panel stack" aria-labelledby="pn-an-t">
-        <div class="cab-sec"><h3 id="pn-an-t">O que funciona e o que não</h3><button class="btn" type="button" id="pn-analisar" hidden>Gerar análise</button></div>
-        <div class="stack" id="pn-analise"></div>
+      <section class="stack" aria-labelledby="in-sem-t" style="gap:10px;margin-top:18px">
+        <div class="cab-sec"><h3 id="in-sem-t" style="font-size:17px">A semana em números</h3><a class="link-acao" href="#desempenho">Ver desempenho</a></div>
+        <p class="fonte" id="in-fonte" style="margin:0"></p>
+        <div class="kpis" id="in-kpis" style="margin:0"></div>
+        <div class="lista-mini" id="in-quedas"></div>
       </section>
-      <section class="panel stack" aria-labelledby="pn-fm-t"><h3 id="pn-fm-t">Por formato <span class="hint">· últimos 30 dias</span></h3><div class="stack" style="gap:10px" id="pn-formatos"></div></section>
-    </div>
-    <div class="painel-grid largo">
-      <section class="panel stack" aria-labelledby="pn-tp-t">
+    </section>
+
+    <!-- CALENDÁRIO -->
+    <section id="tab-calendario" data-section="calendario" hidden>
+      <div class="section-head">
+        <div>
+          <h2>Calendário</h2>
+          <p>Quando cada conteúdo vai ao ar. Toque num post para abrir a ficha; no computador, arraste para mudar a data.</p>
+        </div>
+      </div>
+      <details class="filtros" id="cal-filtros">
+        <summary class="btn">Filtros <span class="chip" id="cal-filtros-n" hidden></span></summary>
+        <div class="filtros-corpo">
+          <div class="st-filtros" id="cal-status" role="group" aria-label="Filtrar por status"></div>
+          <div class="sel-filtros">
+            <select id="fl-rede" aria-label="Filtrar por rede">
+              <option value="">Todas as redes</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option>
+            </select>
+            <select id="fl-formato" aria-label="Filtrar por formato">
+              <option value="">Todos os formatos</option><option value="reels">Reels</option><option value="carrossel">Carrossel</option><option value="story">Story</option><option value="post">Post</option><option value="tiktok">TikTok</option><option value="_">Sem formato</option>
+            </select>
+            <select id="fl-resp" aria-label="Filtrar por responsável"><option value="">Todos os responsáveis</option></select>
+            <button class="btn ghost" type="button" id="fl-limpar" hidden>Limpar filtros</button>
+            <span class="hint" id="fl-info"></span>
+          </div>
+        </div>
+      </details>
+      <div class="cal-layout">
+        <aside class="panel caixa" id="caixa" aria-labelledby="caixa-titulo">
+          <h3 id="caixa-titulo">Sem data <span class="mono" id="semdata-n"></span></h3>
+          <p class="hint" id="semdata-dica">Arraste para um dia do calendário.</p>
+          <div class="ideias" id="semdata"></div>
+        </aside>
+        <div class="stack" style="gap:10px;min-width:0">
+          <div class="cal-head">
+            <div class="cal-nav">
+              <button class="btn icone" type="button" id="cal-ant" aria-label="Mês anterior"></button>
+              <button class="btn" type="button" id="cal-hoje">Hoje</button>
+              <button class="btn icone" type="button" id="cal-prox" aria-label="Próximo mês"></button>
+              <h3 id="cal-titulo" aria-live="polite"></h3>
+            </div>
+            <p class="hint" id="cal-dica"></p>
+          </div>
+          <div id="cal-grade" class="mes"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- IDEIAS -->
+    <section id="tab-ideias" data-section="ideias" hidden>
+      <div class="section-head">
+        <div>
+          <h2>Ideias</h2>
+          <p>Guarde a ideia em segundos, veja o que está em alta no nicho e decida: vai para a produção ou para o arquivo.</p>
+        </div>
+      </div>
+      <div class="painel-grid largo">
+        <section class="panel stack" aria-labelledby="id-cx-t">
+          <h3 id="id-cx-t">Caixa de ideias <span class="mono" id="ideias-n"></span></h3>
+          <form class="rapida" id="form-ideia">
+            <select id="ideia-cliente" aria-label="Cliente da ideia" hidden></select>
+            <input type="text" id="ideia-titulo" maxlength="140" placeholder="Nova ideia de post…" aria-label="Título da nova ideia" autocomplete="off" enterkeyhint="done">
+            <button class="btn primary" type="submit" id="ideia-add">Guardar</button>
+          </form>
+          <div class="ideias" id="ideias"></div>
+          <details id="id-arquivo"><summary class="hint">Arquivadas <span id="id-arquivo-n"></span></summary><div class="ideias" id="id-arquivadas" style="margin-top:8px"></div></details>
+        </section>
+        <section class="panel stack" aria-labelledby="pn-td-t">
+          <div class="cab-sec"><h3 id="pn-td-t">Assuntos em alta</h3><button class="btn" type="button" id="pn-buscar" hidden>Buscar assuntos em alta</button></div>
+          <div class="contas-sel" id="id-contas" role="group" aria-label="Conta do Instagram"></div>
+          <div class="stack" style="gap:8px" id="pn-tendencias"></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- PRODUÇÃO -->
+    <section id="tab-producao" data-section="producao" hidden>
+      <div class="section-head">
+        <div>
+          <h2>Produção</h2>
+          <p>Tudo o que está sendo feito, por etapa: do roteiro ao publicado. Os vídeos mostram também a etapa da edição com o Claude.</p>
+        </div>
+        <button class="btn primary" type="button" id="pr-novo" hidden>Novo conteúdo</button>
+      </div>
+      <div class="etapas" id="pr-lista"></div>
+    </section>
+
+    <!-- DESEMPENHO -->
+    <section id="tab-desempenho" data-section="desempenho" hidden>
+      <div class="section-head">
+        <div>
+          <h2>Desempenho</h2>
+          <p>Os números do Instagram de cada conta: a última semana comparada com a anterior, o que está funcionando e os posts que mais renderam.</p>
+        </div>
+        <div class="painel-acoes">
+          <span class="hint" id="pn-progresso" role="status"></span>
+          <button class="btn primary" type="button" id="pn-atualizar" hidden>Atualizar agora</button>
+        </div>
+      </div>
+      <div class="contas-sel" id="pn-contas" role="group" aria-label="Conta do Instagram"></div>
+      <p class="fonte" id="pn-fonte"></p>
+      <div class="kpis" id="pn-kpis"></div>
+      <div class="painel-grid">
+        <section class="panel stack" aria-labelledby="pn-an-t">
+          <div class="cab-sec"><h3 id="pn-an-t">O que funciona e o que não</h3><button class="btn" type="button" id="pn-analisar" hidden>Gerar análise</button></div>
+          <div class="stack" id="pn-analise"></div>
+        </section>
+        <section class="panel stack" aria-labelledby="pn-fm-t"><h3 id="pn-fm-t">Por formato <span class="hint">· últimos 30 dias</span></h3><div class="stack" style="gap:10px" id="pn-formatos"></div></section>
+      </div>
+      <section class="panel stack" aria-labelledby="pn-tp-t" style="margin-bottom:14px">
         <div class="cab-sec"><h3 id="pn-tp-t">Posts que mais renderam <span class="hint">· 30 dias</span></h3>
           <select id="pn-ordem" aria-label="Ordenar posts por">
             <option value="views">Mais visualizações</option><option value="engaj">Mais engajamento</option><option value="salvos">Mais salvamentos</option><option value="compart">Mais compartilhamentos</option>
           </select></div>
         <ol class="tops" id="pn-tops"></ol>
       </section>
-      <section class="panel stack" aria-labelledby="pn-td-t">
-        <div class="cab-sec"><h3 id="pn-td-t">Assuntos em alta no nicho</h3><button class="btn" type="button" id="pn-buscar" hidden>Buscar assuntos em alta</button></div>
-        <div class="stack" style="gap:8px" id="pn-tendencias"></div>
-      </section>
-    </div>
-    <section class="panel stack" aria-labelledby="pn-gr-t" style="margin-bottom:14px"><h3 id="pn-gr-t">Todas as contas <span class="hint">· últimos 7 dias</span></h3><div class="tabela-wrap" id="pn-geral"></div></section>
-    <details class="panel" id="pn-config"><summary>Contas e nichos</summary>
-      <p class="hint" style="margin:10px 0 4px">Escolha as contas que aparecem no Painel e descreva o nicho de cada uma. O Claude usa o nicho para buscar os assuntos em alta.</p>
-      <div id="pn-config-lista"></div>
-    </details>
-  </section>
+      <section class="panel stack" aria-labelledby="pn-gr-t"><h3 id="pn-gr-t">Contas <span class="hint">· últimos 7 dias</span></h3><div class="tabela-wrap" id="pn-geral"></div></section>
+    </section>
 
-  <!-- ESTILOS -->
-  <section id="tab-estilos" data-section="estilos" hidden>
-    <div class="section-head">
-      <div>
-        <h2>Estilos</h2>
-        <p>O jeito Where2Go de editar, num lugar só. O Claude lê o estilo escolhido em cada projeto e aplica no vídeo. A prévia é aproximada; o vídeo final sai do Remotion.</p>
+    <!-- BIBLIOTECA -->
+    <section id="tab-biblioteca" data-section="biblioteca" hidden>
+      <div class="section-head">
+        <div>
+          <h2>Biblioteca</h2>
+          <p>As referências que o time usa de inspiração e os estilos de edição de cada cliente. O Claude lê os dois para editar os vídeos.</p>
+        </div>
+        <div class="seg" id="bib-modo" role="group" aria-label="Parte da biblioteca">
+          <button type="button" data-v="referencias" aria-pressed="true">Referências</button><button type="button" data-v="estilos" aria-pressed="false">Estilos de edição</button>
+        </div>
       </div>
-      <button class="btn" type="button" id="novo-estilo">Novo estilo</button>
-    </div>
-    <div class="style-layout">
-      <div class="style-list" id="style-list"></div>
-      <form class="panel stack" id="form-estilo" hidden>
-        <label class="field"><span>Nome do estilo</span><input type="text" id="e-nome" maxlength="80"></label>
-        <div class="field"><span>Cores</span>
-          <div class="colors">
-            <label class="color"><input type="color" id="e-destaque"><span>Destaque<code id="e-destaque-v"></code></span></label>
-            <label class="color"><input type="color" id="e-fundo"><span>Fundo da cartela<code id="e-fundo-v"></code></span></label>
-            <label class="color"><input type="color" id="e-texto"><span>Texto da cartela<code id="e-texto-v"></code></span></label>
-          </div>
+      <div id="bib-referencias">
+        <div class="ref-layout">
+          <div class="refs" id="refs"></div>
+          <form class="panel stack" id="form-ref">
+            <h3 style="font-size:16px">Adicionar referência</h3>
+            <label class="field"><span>Título</span><input type="text" id="r-titulo" required maxlength="140" placeholder="Ex.: Roteiro de 3 dias em Paraty"></label>
+            <label class="field"><span>Criador</span><input type="text" id="r-criador" maxlength="80" placeholder="@perfil"></label>
+            <label class="field" id="r-arquivo-campo"><span>Vídeo ou imagem (até 20 MB)</span><input type="file" id="r-arquivo" accept="video/mp4,video/webm,image/png,image/jpeg,image/webp"></label>
+            <label class="field"><span>Link (opcional)</span><input type="url" id="r-link" placeholder="https://www.instagram.com/reel/…"></label>
+            <label class="field"><span>Cliente</span><select id="r-cliente"></select></label>
+            <label class="field"><span>Estilo relacionado</span><select id="r-estilo"></select></label>
+            <label class="field"><span>Tags</span><input type="text" id="r-tags" maxlength="200" placeholder="gancho, legenda, cartela"></label>
+            <label class="field"><span>O que copiar</span><textarea id="r-notas" maxlength="4000" placeholder="Ex.: legenda de 1 palavra, corte a cada 2 s, CTA no fim pedindo pra salvar"></textarea></label>
+            <button class="btn primary" type="submit" id="r-salvar">Adicionar</button>
+          </form>
         </div>
-        <div class="field"><span>Palavras por legenda</span>
-          <div class="seg" id="e-palavras" role="group" aria-label="Palavras por legenda">
-            <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button><button type="button" data-v="3">3</button>
-          </div>
+      </div>
+      <div id="bib-estilos" hidden>
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:14px"><p class="hint" style="max-width:62ch">O jeito de editar de cada cliente. A prévia é aproximada; o vídeo final sai do Remotion.</p><button class="btn" type="button" id="novo-estilo">Novo estilo</button></div>
+        <div class="style-layout">
+          <div class="style-list" id="style-list"></div>
+          <form class="panel stack" id="form-estilo" hidden>
+            <label class="field"><span>Nome do estilo</span><input type="text" id="e-nome" maxlength="80"></label>
+            <label class="field"><span>Cliente</span><select id="e-cliente"></select></label>
+            <div class="field"><span>Cores</span>
+              <div class="colors">
+                <label class="color"><input type="color" id="e-destaque"><span>Destaque<code id="e-destaque-v"></code></span></label>
+                <label class="color"><input type="color" id="e-fundo"><span>Fundo da cartela<code id="e-fundo-v"></code></span></label>
+                <label class="color"><input type="color" id="e-texto"><span>Texto da cartela<code id="e-texto-v"></code></span></label>
+              </div>
+            </div>
+            <div class="field"><span>Palavras por legenda</span>
+              <div class="seg" id="e-palavras" role="group" aria-label="Palavras por legenda">
+                <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button><button type="button" data-v="3">3</button>
+              </div>
+            </div>
+            <label class="field"><span>Tamanho da legenda (px em 1080)</span>
+              <div class="range"><input type="range" id="e-tamanho" min="56" max="120" step="2"><output id="e-tamanho-v"></output></div></label>
+            <label class="field"><span>Enquadramento no layout dividido</span>
+              <div class="range"><input type="range" id="e-enq" min="0.1" max="0.45" step="0.01"><output id="e-enq-v"></output></div>
+              <p class="hint">Quanto o rosto desce quando a cartela ocupa a metade de cima.</p></label>
+            <div class="field"><span>Logo (marca d'água)</span>
+              <div class="logo-row" id="e-logo-row">
+                <img id="e-logo-img" alt="Logo atual" hidden>
+                <input type="file" id="e-logo" accept="image/png,image/webp,image/svg+xml,image/jpeg">
+                <button type="button" class="btn ghost" id="e-logo-tirar" hidden>Tirar logo</button>
+              </div>
+              <p class="hint" id="e-logo-hint">PNG com fundo transparente funciona melhor.</p>
+            </div>
+            <label class="field"><span>Regras de edição</span>
+              <textarea id="e-regras" rows="9" maxlength="20000" placeholder="Ritmo, estrutura do roteiro, o que nunca fazer…"></textarea>
+              <p class="hint">O Claude segue isso ao montar o storyboard: gancho, ritmo dos cortes, CTA, o que evitar.</p></label>
+            <label class="hint" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="e-padrao"> Estilo padrão deste cliente</label>
+            <div class="row" style="justify-content:space-between">
+              <div class="row"><button class="btn primary" type="submit" id="e-salvar">Salvar estilo</button><button class="btn" type="button" id="e-duplicar">Duplicar</button></div>
+              <button class="btn danger" type="button" id="e-excluir">Excluir</button>
+            </div>
+            <p class="hint" id="e-info"></p>
+          </form>
+          <div class="empty" id="estilo-empty"><strong>Nenhum estilo ainda</strong>Crie o primeiro estilo da equipe com o botão "Novo estilo".</div>
+          <aside class="preview" aria-label="Prévia do estilo">
+            <div class="seg" id="pv-modo" role="group" aria-label="Layout da prévia">
+              <button type="button" data-v="rosto" aria-pressed="true">Rosto</button><button type="button" data-v="dividida">Dividida</button><button type="button" data-v="cheia">Cheia</button>
+            </div>
+            <div class="phone"><div class="screen" id="pv">
+              <div class="cena"></div>
+              <div class="cartela"><div class="tt"><b>Passo 1.</b> Praia do Bonete</div><div class="img" role="img" aria-label="Imagem da cartela"></div><div class="tx">4 h de trilha ou 1 h de barco</div></div>
+              <div class="gancho">3 praias secretas perto de SP</div>
+              <div class="legenda" id="pv-legenda"></div>
+              <img class="marca" id="pv-marca" alt="" hidden>
+              <div class="tc" id="pv-tc">00:00.00</div>
+            </div></div>
+            <p class="hint" style="text-align:center">Prévia 9:16 · 1080×1920 · 30 fps</p>
+          </aside>
         </div>
-        <label class="field"><span>Tamanho da legenda (px em 1080)</span>
-          <div class="range"><input type="range" id="e-tamanho" min="56" max="120" step="2"><output id="e-tamanho-v"></output></div></label>
-        <label class="field"><span>Enquadramento no layout dividido</span>
-          <div class="range"><input type="range" id="e-enq" min="0.1" max="0.45" step="0.01"><output id="e-enq-v"></output></div>
-          <p class="hint">Quanto o rosto desce quando a cartela ocupa a metade de cima.</p></label>
-        <div class="field"><span>Logo (marca d'água)</span>
-          <div class="logo-row" id="e-logo-row">
-            <img id="e-logo-img" alt="Logo atual" hidden>
-            <input type="file" id="e-logo" accept="image/png,image/webp,image/svg+xml,image/jpeg">
-            <button type="button" class="btn ghost" id="e-logo-tirar" hidden>Tirar logo</button>
-          </div>
-          <p class="hint" id="e-logo-hint">PNG com fundo transparente funciona melhor.</p>
-        </div>
-        <label class="field"><span>Regras de edição</span>
-          <textarea id="e-regras" rows="9" maxlength="20000" placeholder="Ritmo, estrutura do roteiro, o que nunca fazer…"></textarea>
-          <p class="hint">O Claude segue isso ao montar o storyboard: gancho, ritmo dos cortes, CTA, o que evitar.</p></label>
-        <label class="hint" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="e-padrao"> Estilo padrão para projetos novos</label>
-        <div class="row" style="justify-content:space-between">
-          <div class="row"><button class="btn primary" type="submit" id="e-salvar">Salvar estilo</button><button class="btn" type="button" id="e-duplicar">Duplicar</button></div>
-          <button class="btn danger" type="button" id="e-excluir">Excluir</button>
-        </div>
-        <p class="hint" id="e-info"></p>
-      </form>
-      <div class="empty" id="estilo-empty"><strong>Nenhum estilo ainda</strong>Crie o primeiro estilo da equipe com o botão "Novo estilo".</div>
-      <aside class="preview" aria-label="Prévia do estilo">
-        <div class="seg" id="pv-modo" role="group" aria-label="Layout da prévia">
-          <button type="button" data-v="rosto" aria-pressed="true">Rosto</button><button type="button" data-v="dividida">Dividida</button><button type="button" data-v="cheia">Cheia</button>
-        </div>
-        <div class="phone"><div class="screen" id="pv">
-          <div class="cena"></div>
-          <div class="cartela"><div class="tt"><b>Passo 1.</b> Praia do Bonete</div><div class="img" role="img" aria-label="Imagem da cartela"></div><div class="tx">4 h de trilha ou 1 h de barco</div></div>
-          <div class="gancho">3 praias secretas perto de SP</div>
-          <div class="legenda" id="pv-legenda"></div>
-          <img class="marca" id="pv-marca" alt="" hidden>
-          <div class="tc" id="pv-tc">00:00.00</div>
-        </div></div>
-        <p class="hint" style="text-align:center">Prévia 9:16 · 1080×1920 · 30 fps</p>
-      </aside>
-    </div>
-  </section>
+      </div>
+    </section>
 
-  <!-- REFERÊNCIAS -->
-  <section id="tab-referencias" data-section="referencias" hidden>
-    <div class="section-head">
-      <div>
-        <h2>Referências</h2>
-        <p>Os vídeos que o time usa de inspiração. Diga o que copiar de cada um: o Claude estuda os vídeos e atualiza as regras do estilo.</p>
+    <!-- CONFIGURAÇÕES -->
+    <section id="tab-config" data-section="config" hidden>
+      <div class="section-head">
+        <div>
+          <h2>Configurações</h2>
+          <p>Clientes, contas do Instagram, nichos e equipe. Tudo aqui vale para o time inteiro.</p>
+        </div>
       </div>
-    </div>
-    <div class="ref-layout">
-      <div class="refs" id="refs"></div>
-      <form class="panel stack" id="form-ref">
-        <h3 style="font-size:16px">Adicionar referência</h3>
-        <label class="field"><span>Título</span><input type="text" id="r-titulo" required maxlength="140" placeholder="Ex.: Roteiro de 3 dias em Paraty"></label>
-        <label class="field"><span>Criador</span><input type="text" id="r-criador" maxlength="80" placeholder="@perfil"></label>
-        <label class="field" id="r-arquivo-campo"><span>Vídeo ou imagem (até 20 MB)</span><input type="file" id="r-arquivo" accept="video/mp4,video/webm,image/png,image/jpeg,image/webp"></label>
-        <label class="field"><span>Link (opcional)</span><input type="url" id="r-link" placeholder="https://www.instagram.com/reel/…"></label>
-        <label class="field"><span>Estilo relacionado</span><select id="r-estilo"></select></label>
-        <label class="field"><span>Tags</span><input type="text" id="r-tags" maxlength="200" placeholder="gancho, legenda, cartela"></label>
-        <label class="field"><span>O que copiar</span><textarea id="r-notas" maxlength="4000" placeholder="Ex.: legenda de 1 palavra, corte a cada 2 s, CTA no fim pedindo pra salvar"></textarea></label>
-        <button class="btn primary" type="submit" id="r-salvar">Adicionar</button>
-      </form>
-    </div>
-  </section>
-</main>
+      <div class="stack">
+        <section class="panel stack" aria-labelledby="cfg-cl-t">
+          <div class="cab-sec"><h3 id="cfg-cl-t">Clientes</h3><button class="btn" type="button" id="cfg-novo-cliente" hidden>Novo cliente</button></div>
+          <p class="hint">A cor marca o cliente no Calendário e na Produção quando a visão é “Todos os clientes”. O nicho ajuda o Claude a buscar os assuntos em alta.</p>
+          <div id="cfg-clientes"></div>
+        </section>
+        <section class="panel stack" aria-labelledby="cfg-ct-t">
+          <h3 id="cfg-ct-t">Contas do Instagram</h3>
+          <p class="hint">De qual cliente é cada conta, se aparece no Desempenho e o nicho (quando for diferente do nicho do cliente).</p>
+          <div id="pn-config-lista"></div>
+        </section>
+        <section class="panel stack" aria-labelledby="cfg-eq-t">
+          <h3 id="cfg-eq-t">Equipe</h3>
+          <p class="hint">Quem já trabalhou na Central. Para dar acesso a alguém, use o menu Compartilhar da página.</p>
+          <div id="cfg-equipe"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+</div>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <!-- FICHA DO POST -->
@@ -682,12 +819,17 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   </header>
   <div class="ficha-corpo" id="f-corpo">
     <label class="field"><span>Título</span><input type="text" id="f-titulo" maxlength="140" placeholder="Ex.: 3 praias secretas perto de SP" autocomplete="off" enterkeyhint="done"></label>
+    <div class="row">
+      <label class="field"><span>Cliente</span><select id="f-cliente"></select></label>
+      <label class="field"><span>Conta</span><select id="f-conta"></select></label>
+    </div>
     <div class="field so-edicao"><span>Status</span><div class="chips" id="f-status" role="group" aria-label="Status do post"></div></div>
     <div class="row datahora">
       <label class="field"><span>Data</span><input type="date" id="f-data"></label>
       <label class="field"><span>Hora</span><input type="time" id="f-hora"></label>
     </div>
-    <div class="so-edicao" style="margin-top:-10px"><button class="link-acao" type="button" id="f-sem-data">Tirar a data e voltar pra caixa de ideias</button></div>
+    <div class="so-edicao" style="margin-top:-10px"><button class="link-acao" type="button" id="f-sem-data">Tirar a data</button></div>
+    <label class="field so-edicao"><span>Prazo de entrega</span><input type="date" id="f-prazo" style="max-width:220px"></label>
     <div class="field"><span>Formato</span><div class="chips" id="f-formato" role="group" aria-label="Formato"></div></div>
     <div class="row so-novo"><button class="btn primary" type="button" id="f-criar">Criar post</button><button class="btn" type="button" id="f-cancelar">Cancelar</button></div>
     <div class="field so-edicao"><span>Redes</span><div class="chips" id="f-redes" role="group" aria-label="Redes"></div></div>
@@ -710,7 +852,16 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     <label class="field so-edicao"><span>Ideia / roteiro</span><textarea id="f-ideia" rows="5" maxlength="10000" placeholder="Gancho, o que mostrar, falas, cenas, CTA…"></textarea></label>
     <label class="field so-edicao"><span>Legenda</span><textarea id="f-legenda" rows="6" maxlength="5000" placeholder="O texto que vai no post, com as hashtags."></textarea>
       <span class="contagem"><span id="f-legenda-hash">As primeiras linhas aparecem antes do “mais”.</span><span id="f-legenda-n">0 / 2.200</span></span></label>
-    <section class="f-sec so-edicao" id="f-projeto" aria-label="Projeto de vídeo"></section>
+    <section class="f-sec so-edicao" id="f-video" aria-label="Edição de vídeo">
+      <div class="stack" id="fv-corpo"></div>
+      <form class="stack" id="fv-nota" hidden style="gap:8px">
+        <label class="field"><span>Comentário no vídeo</span><textarea id="fv-nota-texto" rows="2" maxlength="2000" placeholder="O que mudar? Ex.: tira o zoom aqui, a legenda cobriu o rosto…"></textarea></label>
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <label class="hint" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="fv-nota-tempo" checked> Marcar no tempo do vídeo <span class="mono" id="fv-nota-tempo-val"></span></label>
+          <button class="btn primary" type="submit" id="fv-nota-enviar">Comentar no vídeo</button>
+        </div>
+      </form>
+    </section>
     <section class="f-sec so-edicao" aria-label="Anexos">
       <span class="eyebrow">Anexos</span>
       <div class="anexos" id="f-anexos"></div>
@@ -777,11 +928,11 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   const S = {
     db: null, assets: null, user: null, myId: null, canWrite: true,
     estilos: [], refs: [], projetos: [], notas: [], posts: [], contas: [], analises: [],
-    loaded: { estilos: false, referencias: false, projetos: false, posts: false, contas: false, analises: false, config: false },
+    loaded: { estilos: false, referencias: false, projetos: false, posts: false, contas: false, analises: false, config: false, clientes: false },
     // Painel: conta escolhida, ordem dos posts, histórico diário da conta escolhida, conector Pipeboard
     pn: { sel: null, ordem: "views", hist: [], histDe: undefined, unsubHist: null, mcp: null, podeAtualizar: false, atualizando: false, viraram: new Set(),
       sample: null, analisando: null, podeBuscar: false },
-    config: [], isOwner: false,
+    config: [], isOwner: false, clientes: [], cli: "", bib: "referencias", aba: null,
     filtro: null, aberto: null, unsubNotas: null,
     estiloSel: null, rascunho: null, modo: "rosto",
     // Calendário: ref = dia de referência do mês (ou da semana, no celular) que está na tela
@@ -879,254 +1030,252 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     }
   }
 
-  // ---------- abas ----------
-  const ABAS = ["projetos", "calendario", "painel", "estilos", "referencias"];
+  // ---------- clientes: o cliente em foco filtra a página inteira ----------
+  const CORES_CLIENTE = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"]; // paleta categórica validada, sempre nesta ordem
+  const numOk = (x) => typeof x === "number" && isFinite(x);
+  const ordemPor = (a, b) => (numOk(a.ordem) ? a.ordem : 99) - (numOk(b.ordem) ? b.ordem : 99) || String(a.nome || a.username || "").localeCompare(String(b.nome || b.username || ""), "pt-BR");
+  const clientesAtivos = () => S.clientes.filter((c) => c.ativo !== false).sort(ordemPor);
+  const clientePorId = (id) => (id ? S.clientes.find((c) => c.id === id) || null : null);
+  const corCliente = (id) => { const c = clientePorId(id); return c && /^#[0-9a-f]{6}$/i.test(c.cor || "") ? c.cor : null; };
+  const nomeCliente = (id) => { const c = clientePorId(id); return c ? (c.nome || "Cliente sem nome") : "Sem cliente"; };
+  const clienteEmFoco = () => (S.cli && S.cli !== "_" ? S.cli : null);
+  function noEscopo(clienteId) { if (!S.cli) return true; if (S.cli === "_") return !clienteId; return clienteId === S.cli; }
+  function dotCliente(id) { const cor = corCliente(id); return h("span", { class: "cdot", style: cor ? `--cor:${cor}` : null, role: "img", "aria-label": nomeCliente(id), title: nomeCliente(id) }); }
+  const marcaCliente = (id) => h("span", { class: "cli-nome" }, dotCliente(id), nomeCliente(id)); // bolinha + nome: nunca só a cor
+  function contasDoCliente(cid) { return S.contas.filter((c) => c.ativa !== false && (!cid || c.clienteId === cid)).sort(ordemPor); }
+  const contaPadrao = (cid) => { const l = cid ? contasDoCliente(cid) : []; return l.length ? l[0].id : null; };
+  function estiloDoCliente(cid) {
+    const c = clientePorId(cid);
+    if (c && c.estiloId && estiloPorId(c.estiloId)) return estiloPorId(c.estiloId);
+    return S.estilos.find((e) => cid && e.clienteId === cid && e.padrao) || estiloPadrao() || null;
+  }
+  function opcoesClientes(sel, valor, vazio) {
+    const itens = [["", vazio], ...clientesAtivos().map((c) => [c.id, c.nome || "Cliente sem nome"])];
+    if (valor && !itens.some(([v]) => v === valor)) itens.push([valor, nomeCliente(valor)]);
+    const assin = JSON.stringify(itens);
+    if (sel.dataset.assin !== assin) { sel.replaceChildren(...itens.map(([v, t]) => h("option", { value: v }, t))); sel.dataset.assin = assin; }
+    if (document.activeElement !== sel) sel.value = valor || "";
+  }
+  function renderSeletorCliente() {
+    const sel = $("#cli-sel");
+    const temSem = S.posts.some((p) => !p.clienteId && p.status !== "arquivado") || S.contas.some((c) => !c.clienteId);
+    const itens = [["", "Todos os clientes"], ...clientesAtivos().map((c) => [c.id, c.nome || "Cliente sem nome"]), ...(temSem ? [["_", "Sem cliente"]] : [])];
+    if (S.cli && S.loaded.clientes && S.loaded.posts && S.loaded.contas && !itens.some(([v]) => v === S.cli)) { S.cli = ""; gravarLocal("central.cliente", ""); }
+    const assin = JSON.stringify(itens);
+    if (sel.dataset.assin !== assin) { sel.replaceChildren(...itens.map(([v, t]) => h("option", { value: v }, t))); sel.dataset.assin = assin; }
+    sel.value = S.cli || "";
+  }
+  $("#cli-sel").addEventListener("change", (ev) => { S.cli = ev.target.value; gravarLocal("central.cliente", S.cli); S.pn.sel = null; S.rascunho = null; S.estiloSel = null; renderTudo(); });
+
+  // ---------- navegação (na ordem do trabalho) ----------
+  const ROTAS = ["inicio", "calendario", "ideias", "producao", "desempenho", "biblioteca", "config"];
+  const APELIDOS = { projetos: "producao", painel: "desempenho", estilos: "biblioteca", referencias: "biblioteca" }; // links antigos continuam funcionando
+  function fecharMais() { $("#mais-menu").hidden = true; $("#nav-mais").setAttribute("aria-expanded", "false"); }
   function mostrarAba() {
-    const aba = ABAS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "projetos";
-    for (const a of ABAS) $("#tab-" + a).hidden = a !== aba;
-    document.querySelectorAll(".tabs a").forEach((a) => a.setAttribute("aria-current", a.dataset.tab === aba ? "page" : "false"));
-    // No celular as abas rolam de lado: mantém a aba aberta à vista.
-    const ativa = document.querySelector('.tabs a[aria-current="page"]'); const nav = document.querySelector(".tabs");
-    if (ativa && nav && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = ativa.offsetLeft - nav.offsetLeft - (nav.clientWidth - ativa.offsetWidth) / 2;
+    let pedido = location.hash.slice(1);
+    if (pedido === "estilos" || pedido === "referencias") S.bib = pedido;
+    if (APELIDOS[pedido]) pedido = APELIDOS[pedido];
+    const aba = ROTAS.includes(pedido) ? pedido : "inicio";
+    for (const a of ROTAS) $("#tab-" + a).hidden = a !== aba;
+    document.querySelectorAll("#nav a, #mais-menu a").forEach((a) => a.setAttribute("aria-current", a.getAttribute("href") === "#" + aba ? "page" : "false"));
+    $("#nav-mais").setAttribute("aria-current", aba === "biblioteca" || aba === "config" ? "page" : "false");
+    fecharMais(); mostrarBib();
+    if (S.aba !== aba) { S.aba = aba; window.scrollTo(0, 0); }
   }
   window.addEventListener("hashchange", mostrarAba);
-
-  // ---------- PROJETOS ----------
-  function renderPipeline() {
-    const el = $("#pipeline"); el.replaceChildren();
-    for (const st of STATUS) {
-      const n = S.projetos.filter((p) => p.status === st.id).length;
-      const b = h("button", { class: "stage", type: "button", style: `--c: var(--st-${st.id})`, "aria-pressed": S.filtro === st.id ? "true" : "false",
-        onclick: () => { S.filtro = S.filtro === st.id ? null : st.id; renderProjetos(); } }, h("b", null, n), h("span", null, st.nome));
-      el.append(b);
-    }
+  $("#nav-mais").addEventListener("click", (ev) => { ev.stopPropagation(); const m = $("#mais-menu"); m.hidden = !m.hidden; $("#nav-mais").setAttribute("aria-expanded", String(!m.hidden)); });
+  document.addEventListener("click", (ev) => { if (!$("#mais-menu").hidden && !ev.target.closest("#mais-menu, #nav-mais")) fecharMais(); });
+  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") fecharMais(); });
+  function mostrarBib() {
+    const m = S.bib === "estilos" ? "estilos" : "referencias";
+    $("#bib-referencias").hidden = m !== "referencias"; $("#bib-estilos").hidden = m !== "estilos";
+    document.querySelectorAll("#bib-modo button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === m)));
   }
+  $("#bib-modo").addEventListener("click", (ev) => { const b = ev.target.closest("button"); if (!b) return; S.bib = b.dataset.v; mostrarBib(); });
+
+  // ---------- etapas do vídeo (edição com o Claude, dentro da ficha do post) ----------
   function pill(status) {
     const st = STATUS.find((s) => s.id === status) || STATUS[0];
     return h("span", { class: "pill", style: `--c: var(--st-${st.id})` }, st.nome);
   }
-  function renderProjetos() {
-    renderPipeline();
-    const lista = $("#proj-list"); lista.replaceChildren();
-    const ordem = [...S.projetos].sort((a, b) => (b.atualizadoEm || "").localeCompare(a.atualizadoEm || ""));
-    const vis = S.filtro ? ordem.filter((p) => p.status === S.filtro) : ordem;
-    if (!S.loaded.projetos) lista.append(h("div", { class: "empty" }, h("strong", null, "Carregando projetos…"), "Buscando a fila da equipe."));
-    else if (!vis.length) lista.append(h("div", { class: "empty" }, h("strong", null, S.filtro ? "Nada nesta etapa" : "Nenhum projeto ainda"),
-      S.filtro ? "Toque na etapa de novo para ver todos." : "Crie o primeiro em “Novo projeto” ou peça pro Claude: “cria um projeto na Central pra esse vídeo”."));
-    for (const p of vis) {
-      const est = estiloPorId(p.estiloId);
-      lista.append(h("button", { class: "proj", type: "button", "aria-current": S.aberto === p.id ? "true" : "false", onclick: () => abrirProjeto(p.id) },
-        h("h3", null, p.titulo || "Sem título"), pill(p.status),
-        h("div", { class: "meta" }, pessoa(p.responsavel, false), est ? h("span", null, est.nome) : null,
-          (p.versoes || []).length ? h("span", null, p.versoes.length === 1 ? "1 versão" : `${p.versoes.length} versões`) : null,
-          h("span", null, quando(p.atualizadoEm)))));
-    }
-    resolverPessoas(lista);
-    renderDetalhe();
-  }
-  function selectEstilos(sel, valor, comVazio) {
+  function selectEstilos(sel, valor, comVazio, clienteId) {
+    const lista = S.estilos.filter((e) => !clienteId || !e.clienteId || e.clienteId === clienteId || e.id === valor)
+      .sort((a, b) => (b.clienteId === clienteId ? 1 : 0) - (a.clienteId === clienteId ? 1 : 0) || (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
     sel.replaceChildren();
     if (comVazio) sel.append(h("option", { value: "" }, "—"));
-    for (const e of S.estilos) sel.append(h("option", { value: e.id }, e.nome + (e.padrao ? " (padrão)" : "")));
-    if (valor && S.estilos.some((e) => e.id === valor)) sel.value = valor;
-    else if (!comVazio && estiloPadrao()) sel.value = estiloPadrao().id;
+    for (const e of lista) sel.append(h("option", { value: e.id }, (e.nome || "Estilo sem nome") + (e.padrao ? " (padrão)" : "")));
+    if (valor && lista.some((e) => e.id === valor)) sel.value = valor;
   }
-
-  function abrirProjeto(id) {
-    if (S.aberto !== id) {
-      S.aberto = id;
-      if (S.unsubNotas) S.unsubNotas();
-      S.notas = []; S.unsubNotas = null;
-      $("#nota-texto").value = "";
-      if (S.db) S.unsubNotas = S.db.collection(`projetos/${id}/notas`).onSnapshot((snap) => {
-        S.notas = snap.docs.map((d) => ({ id: d.id, ...d.data() })); renderDetalhe();
-      }, (e) => console.warn("notas", e));
-    }
-    renderProjetos();
-    if (window.matchMedia("(max-width: 900px)").matches) $("#detail-wrap").scrollIntoView({ behavior: "smooth", block: "start" });
+  const fv = { projetoId: null, notas: [], unsub: null };
+  function assinarNotas(pid) {
+    if (fv.projetoId === pid) return;
+    if (fv.unsub) fv.unsub();
+    fv.projetoId = pid; fv.notas = []; fv.unsub = null; $("#fv-corpo").dataset.assin = "";
+    if (S.db && pid) fv.unsub = S.db.collection(`projetos/${pid}/notas`).onSnapshot((snap) => {
+      if (fv.projetoId !== pid) return;
+      fv.notas = snap.docs.map((d) => ({ id: d.id, ...d.data() })); if (S.ficha) atualizarFicha();
+    }, (e) => console.warn("notas", e));
   }
-
-  async function atualizarProjeto(p, campos, btn, msg) {
-    const ok = await salvando(btn, () => S.db.doc(`projetos/${p.id}`).update({ ...campos, atualizadoEm: agora() }));
+  function soltarNotas() { if (fv.unsub) fv.unsub(); fv.projetoId = null; fv.notas = []; fv.unsub = null; }
+  async function salvarProjeto(pr, campos, btn, msg) {
+    const ok = await salvando(btn, () => emFila("projetos/" + pr.id, () => S.db.doc(`projetos/${pr.id}`).update({ ...campos, atualizadoEm: agora() })));
     if (ok && msg) toast(msg);
+    return ok;
   }
-
-  function videoAtual() { return $("#detail-body video[data-atual]"); }
-
-  function renderDetalhe() {
-    const p = S.projetos.find((x) => x.id === S.aberto);
-    $("#detail-empty").hidden = !!p; $("#detail").hidden = !p;
-    if (!p) return;
-    const body = $("#detail-body");
-    // Guarda o ponto do vídeo para não reiniciar a reprodução a cada atualização.
+  const videoAtual = () => $("#fv-corpo video[data-atual]");
+  const ETAPAS_ANTES = ["ideia", "roteiro", "producao", "revisao"];
+  function renderVideo(p) {
+    const box = $("#f-video"); const corpo = $("#fv-corpo");
+    const pid = p.projetoId || null; const fmt = formatoDe(valorAtual(p, "formato"));
+    box.hidden = !pid && !(fmt && fmt.video);
+    if (box.hidden) { assinarNotas(null); poe(corpo); corpo.dataset.assin = ""; $("#fv-nota").hidden = true; return; }
+    assinarNotas(pid);
+    const pr = pid ? S.projetos.find((x) => x.id === pid) : null;
+    $("#fv-nota").hidden = !(pr && S.canWrite && S.db);
+    const assin = JSON.stringify([pid, pr && [pr.status, pr.estiloId, pr.storyboard, pr.storyboardResumo, pr.versoes, pr.briefing, pr.titulo], fv.notas, S.canWrite, S.loaded.projetos,
+      S.estilos.map((e) => [e.id, e.nome, e.clienteId, e.padrao]), p.clienteId, p.titulo]);
+    if (corpo.dataset.assin === assin) return; // não recria os vídeos (nem interrompe quem está assistindo)
     const vAnt = videoAtual(); const tAnt = vAnt ? vAnt.currentTime : 0; const srcAnt = vAnt ? vAnt.getAttribute("src") : null;
-    body.replaceChildren();
-    const est = estiloPorId(p.estiloId);
-
-    // Cabeçalho
-    const statusSel = h("select", { id: "d-status", "aria-label": "Etapa", disabled: !S.canWrite,
-      onchange: (ev) => atualizarProjeto(p, { status: ev.target.value }, null, "Etapa atualizada") },
+    corpo.dataset.assin = assin;
+    const cab = h("div", { class: "cab-sec" }, h("span", { class: "eyebrow" }, "Edição de vídeo"), pr ? pill(pr.status) : null);
+    if (!pid) {
+      poe(corpo, cab, h("p", { class: "hint" }, "Quando o vídeo bruto chegar, comece a edição: o Claude monta o storyboard no estilo do cliente, posta as versões aqui e o time comenta no segundo exato do vídeo."),
+        S.canWrite && S.db ? h("button", { class: "btn primary", type: "button", style: "justify-self:start", onclick: (ev) => comecarVideo(ev.currentTarget) }, icone("filme"), "Começar edição de vídeo") : null);
+      return;
+    }
+    if (!pr) {
+      poe(corpo, cab, S.loaded.projetos ? h("p", { class: "hint" }, "A edição de vídeo ligada a este post foi excluída.") : h("p", { class: "hint" }, "Carregando a edição…"),
+        S.loaded.projetos && S.canWrite ? h("button", { class: "btn", type: "button", style: "justify-self:start", onclick: () => { salvarPost(p.id, { projetoId: null }); atualizarFicha(); } }, "Desligar e começar outra") : null);
+      return;
+    }
+    const est = estiloPorId(pr.estiloId);
+    const stSel = h("select", { id: "fv-status", "aria-label": "Etapa do vídeo", disabled: !S.canWrite, onchange: (ev) => salvarProjeto(pr, { status: ev.target.value }, null, "Etapa do vídeo atualizada") },
       STATUS.map((s) => h("option", { value: s.id }, s.nome)));
-    statusSel.value = p.status || "bruto";
-    const estSel = h("select", { id: "d-estilo", "aria-label": "Estilo", disabled: !S.canWrite,
-      onchange: (ev) => atualizarProjeto(p, { estiloId: ev.target.value || null }, null, "Estilo do projeto atualizado") });
-    selectEstilos(estSel, p.estiloId, true);
-    body.append(
-      h("div", { class: "stack", style: "gap:8px" },
-        h("div", { class: "row", style: "justify-content:space-between;align-items:center" }, pill(p.status), h("span", { class: "mono", style: "color:var(--muted)" }, "id " + p.id)),
-        h("h2", null, p.titulo || "Sem título"),
-        h("div", { class: "row" },
-          h("label", { class: "field" }, h("span", null, "Etapa"), statusSel),
-          h("label", { class: "field" }, h("span", null, "Estilo"), estSel),
-          h("div", { class: "field" }, h("span", null, "Responsável"), h("div", { class: "row", style: "align-items:center;gap:8px" }, pessoa(p.responsavel, false),
-            S.canWrite && S.myId && p.responsavel !== S.myId ? h("button", { class: "btn ghost", type: "button", onclick: (ev) => atualizarProjeto(p, { responsavel: S.myId }, ev.currentTarget, "Agora é seu") }, "Assumir") : null)))));
-
-    // Ações por etapa
+    stSel.value = pr.status || "bruto";
+    const estSel = h("select", { id: "fv-estilo", "aria-label": "Estilo de edição", disabled: !S.canWrite, onchange: (ev) => salvarProjeto(pr, { estiloId: ev.target.value || null }, null, "Estilo do vídeo atualizado") });
+    selectEstilos(estSel, pr.estiloId, true, p.clienteId);
     const acoes = h("div", { class: "detail-actions" });
-    if (S.canWrite && p.status === "storyboard" && (p.storyboard || []).length)
-      acoes.append(h("button", { class: "btn primary", type: "button", onclick: (ev) => atualizarProjeto(p, { status: "editando" }, ev.currentTarget, "Storyboard aprovado. O Claude já pode editar.") }, "Aprovar storyboard"));
-    if (S.canWrite && p.status === "revisao") {
-      acoes.append(h("button", { class: "btn primary", type: "button", onclick: (ev) => atualizarProjeto(p, { status: "pronto" }, ev.currentTarget, "Vídeo aprovado!") }, "Aprovar vídeo"));
+    if (S.canWrite && pr.status === "storyboard" && (pr.storyboard || []).length)
+      acoes.append(h("button", { class: "btn primary", type: "button", onclick: (ev) => salvarProjeto(pr, { status: "editando" }, ev.currentTarget, "Storyboard aprovado. O Claude já pode editar.") }, "Aprovar storyboard"));
+    if (S.canWrite && pr.status === "revisao") {
+      acoes.append(h("button", { class: "btn primary", type: "button", onclick: async (ev) => {
+        const ok = await salvarProjeto(pr, { status: "pronto" }, ev.currentTarget, "Vídeo aprovado!");
+        if (ok && ETAPAS_ANTES.includes(statusPost(valorAtual(p, "status")).id)) salvarPost(p.id, { status: "aprovado" });
+      } }, "Aprovar vídeo"));
       acoes.append(h("button", { class: "btn", type: "button", onclick: (ev) => {
-        const abertas = S.notas.filter((n) => !n.resolvida).length;
-        if (!abertas) { toast("Escreva o que mudar nos comentários antes de pedir ajustes."); $("#nota-texto").focus(); return; }
-        atualizarProjeto(p, { status: "editando" }, ev.currentTarget, "Pedido de ajustes enviado");
+        if (!fv.notas.some((n) => !n.resolvida)) { toast("Escreva o que mudar nos comentários do vídeo antes de pedir ajustes."); $("#fv-nota-texto").focus(); return; }
+        salvarProjeto(pr, { status: "editando" }, ev.currentTarget, "Pedido de ajustes enviado");
       } }, "Pedir ajustes"));
     }
-    // Pedido pronto para colar numa sessão do Claude
-    const pedido = `Edita o projeto "${p.titulo}" da Central de Edição (id ${p.id}).` +
-      (est ? ` Estilo: "${est.nome}".` : "") +
-      (p.status === "editando" && (p.versoes || []).length ? " Aplique os comentários em aberto e poste uma nova versão." :
-       p.status === "editando" ? " O storyboard foi aprovado: renderize e poste a versão 1." :
+    const pedido = `Edita o vídeo "${p.titulo || pr.titulo}" da Central Where2Go (post ${p.id}, projeto ${pr.id}).` +
+      (p.clienteId ? ` Cliente: "${nomeCliente(p.clienteId)}".` : "") + (est ? ` Estilo: "${est.nome}".` : "") +
+      (pr.status === "editando" && (pr.versoes || []).length ? " Aplique os comentários em aberto e poste uma nova versão." :
+       pr.status === "editando" ? " O storyboard foi aprovado: renderize e poste a versão 1." :
        " O vídeo bruto vai anexado. Monte o storyboard e poste na Central para aprovação.");
-    const caixa = h("textarea", { class: "copybox", readonly: true, hidden: true, "aria-label": "Pedido para o Claude" });
-    caixa.value = pedido;
+    const caixa = h("textarea", { class: "copybox", readonly: true, hidden: true, "aria-label": "Pedido para o Claude" }); caixa.value = pedido;
     acoes.append(h("button", { class: "btn", type: "button", onclick: async () => {
       try { await navigator.clipboard.writeText(pedido); toast("Pedido copiado. Cole numa conversa com o Claude."); }
       catch { caixa.hidden = false; caixa.focus(); caixa.select(); toast("Copie o texto selecionado."); }
     } }, "Copiar pedido pro Claude"));
-    body.append(acoes, caixa);
-
-    // Post do calendário ligado a este projeto
-    const postLigado = p.postId ? S.posts.find((x) => x.id === p.postId) : null;
-    if (postLigado) body.append(h("div", { class: "row", style: "align-items:center;gap:6px 10px" },
-      h("span", { class: "eyebrow" }, "Post do calendário"),
-      h("button", { class: "btn", type: "button", onclick: () => { location.hash = "calendario"; mostrarAba(); abrirFicha(postLigado.id); } },
-        icone(postLigado.formato || "nenhum"), (postLigado.titulo || "Sem título") + " · " + (postLigado.data ? dataCurta(postLigado.data) : "sem data"))));
-
-    if (p.briefing) body.append(h("div", { class: "stack", style: "gap:4px" }, h("span", { class: "eyebrow" }, "Briefing"), h("p", { style: "margin:0;white-space:pre-wrap;overflow-wrap:anywhere" }, p.briefing)));
-
-    // Storyboard
-    const sb = p.storyboard || [];
-    body.append(h("span", { class: "eyebrow" }, "Storyboard"));
-    if (!sb.length) body.append(h("p", { class: "hint" }, "O Claude coloca o storyboard aqui depois de assistir ao bruto: cada trecho com a fala, o layout, as cartelas e os zooms."));
+    const partes = [cab, h("div", { class: "video-sel" }, h("label", { class: "field" }, h("span", null, "Etapa do vídeo"), stSel), h("label", { class: "field" }, h("span", null, "Estilo de edição"), estSel)), acoes, caixa];
+    if (pr.briefing) partes.push(h("details", null, h("summary", { class: "hint" }, "Briefing do vídeo"), h("p", { style: "margin:8px 0 0;white-space:pre-wrap;overflow-wrap:anywhere" }, pr.briefing)));
+    const sb = pr.storyboard || [];
+    partes.push(h("span", { class: "eyebrow" }, "Storyboard"));
+    if (!sb.length) partes.push(h("p", { class: "hint" }, "O Claude coloca o storyboard aqui depois de assistir ao bruto: cada trecho com a fala, o layout, as cartelas e os zooms."));
     else {
-      if (p.storyboardResumo) body.append(h("p", { style: "margin:0;white-space:pre-wrap" }, p.storyboardResumo));
-      body.append(h("ol", { class: "sb" }, sb.map((c) => h("li", null,
-        h("span", { class: "t" }, `${tempo(c.inicio)}–${tempo(c.fim)}`),
-        h("span", { class: "fala" }, c.fala ? `“${c.fala}”` : ""),
-        h("span", { class: "visual" }, c.visual || "")))));
+      if (pr.storyboardResumo) partes.push(h("p", { style: "margin:0;white-space:pre-wrap" }, pr.storyboardResumo));
+      partes.push(h("ol", { class: "sb" }, sb.map((c) => h("li", null, h("span", { class: "t" }, `${tempo(c.inicio)}–${tempo(c.fim)}`), h("span", { class: "fala" }, c.fala ? `“${c.fala}”` : ""), h("span", { class: "visual" }, c.visual || "")))));
     }
-
-    // Versões
-    const vs = [...(p.versoes || [])].map((v, i) => ({ ...v, n: i + 1 })).reverse();
-    body.append(h("span", { class: "eyebrow" }, "Versões"));
-    if (!vs.length) body.append(h("p", { class: "hint" }, "Quando o Claude renderizar, a prévia aparece aqui para o time assistir e comentar."));
+    const vs = [...(pr.versoes || [])].map((v, i) => ({ ...v, n: i + 1 })).reverse();
+    partes.push(h("span", { class: "eyebrow" }, "Versões"));
+    if (!vs.length) partes.push(h("p", { class: "hint" }, "Quando o Claude renderizar, a prévia aparece aqui para o time assistir e comentar."));
     else {
-      const box = h("div", { class: "versions" });
+      const lista = h("div", { class: "versions" });
       vs.forEach((v, i) => {
         const vid = h("video", { controls: true, playsinline: true, preload: "metadata", src: blob(v.arquivo), "data-n": v.n });
         if (i === 0) vid.setAttribute("data-atual", "");
-        vid.addEventListener("timeupdate", () => { if (vid.hasAttribute("data-atual")) $("#nota-tempo-val").textContent = tempo(vid.currentTime); });
-        vid.addEventListener("play", () => { document.querySelectorAll("#detail-body video").forEach((o) => o.removeAttribute("data-atual")); vid.setAttribute("data-atual", ""); });
+        vid.addEventListener("timeupdate", () => { if (vid.hasAttribute("data-atual")) $("#fv-nota-tempo-val").textContent = tempo(vid.currentTime); });
+        vid.addEventListener("play", () => { document.querySelectorAll("#fv-corpo video").forEach((o) => o.removeAttribute("data-atual")); vid.setAttribute("data-atual", ""); });
         if (i === 0 && srcAnt === vid.getAttribute("src") && tAnt) vid.addEventListener("loadedmetadata", () => { vid.currentTime = tAnt; }, { once: true });
-        const item = h("div", { class: "version" },
-          h("header", null, h("span", null, h("b", null, `Versão ${v.n}`), v.nota ? ` · ${v.nota}` : ""), h("span", null, quando(v.criadoEm))), vid);
-        if (i > 0) { const d = h("details", null, h("summary", null, `Versão ${v.n}`), item); box.append(d); } else box.append(item);
+        const item = h("div", { class: "version" }, h("header", null, h("span", null, h("b", null, `Versão ${v.n}`), v.nota ? ` · ${v.nota}` : ""), h("span", null, quando(v.criadoEm))), vid);
+        lista.append(i > 0 ? h("details", null, h("summary", null, `Versão ${v.n}`), item) : item);
       });
-      body.append(box);
+      partes.push(lista);
     }
-
-    // Comentários
-    const notas = [...S.notas].sort((a, b) => ((a.versao || 0) - (b.versao || 0)) || ((a.tempo ?? 1e9) - (b.tempo ?? 1e9)) || (a.criadoEm || "").localeCompare(b.criadoEm || ""));
-    body.append(h("span", { class: "eyebrow" }, `Comentários (${notas.filter((n) => !n.resolvida).length} em aberto)`));
-    if (!notas.length) body.append(h("p", { class: "hint" }, "Assista à versão e comente no ponto exato: o comentário guarda o segundo do vídeo."));
-    else body.append(h("ul", { class: "notes" }, notas.map((n) => {
+    const notas = [...fv.notas].sort((a, b) => ((a.versao || 0) - (b.versao || 0)) || ((a.tempo ?? 1e9) - (b.tempo ?? 1e9)) || (a.criadoEm || "").localeCompare(b.criadoEm || ""));
+    partes.push(h("span", { class: "eyebrow" }, `Comentários do vídeo (${notas.filter((n) => !n.resolvida).length} em aberto)`));
+    if (!notas.length) partes.push(h("p", { class: "hint" }, "Assista à versão e comente no ponto exato: o comentário guarda o segundo do vídeo."));
+    else partes.push(h("ul", { class: "notes" }, notas.map((n) => {
       const ts = n.tempo != null ? h("button", { class: "ts", type: "button", title: "Ir para este ponto", onclick: () => {
-        const v = document.querySelector(`#detail-body video[data-n="${n.versao}"]`) || videoAtual();
+        const v = document.querySelector(`#fv-corpo video[data-n="${n.versao}"]`) || videoAtual();
         if (v) { v.currentTime = n.tempo; v.play().catch(() => {}); }
       } }, `${n.versao ? "v" + n.versao + " · " : ""}${tempo(n.tempo)}`) : null;
       return h("li", { class: "note" + (n.resolvida ? " done" : "") },
         h("small", null, pessoa(n.autor, n.porClaude, "Alguém do time"), ts, h("span", null, quando(n.criadoEm)),
           S.canWrite ? h("button", { class: "btn ghost", type: "button", style: "padding:0 4px;font-size:12px", onclick: (ev) =>
-            salvando(ev.currentTarget, () => S.db.doc(`projetos/${p.id}/notas/${n.id}`).update({ resolvida: !n.resolvida })) }, n.resolvida ? "Reabrir" : "Resolver") : null),
+            salvando(ev.currentTarget, () => emFila(`projetos/${pr.id}/notas/${n.id}`, () => S.db.doc(`projetos/${pr.id}/notas/${n.id}`).update({ resolvida: !n.resolvida }))) }, n.resolvida ? "Reabrir" : "Resolver") : null),
         h("p", null, n.texto || ""));
     })));
-
-    if (S.canWrite) {
-      const zona = h("div", { class: "row", style: "justify-content:flex-end" });
-      const excluir = h("button", { class: "btn danger ghost", type: "button", onclick: () => {
-        excluir.replaceWith(h("span", { class: "row", style: "align-items:center;gap:8px" }, h("span", { class: "hint" }, "Excluir este projeto e os comentários?"),
-          h("button", { class: "btn danger", type: "button", onclick: (ev) => salvando(ev.currentTarget, async () => {
-            for (const n of S.notas) await S.db.doc(`projetos/${p.id}/notas/${n.id}`).delete();
-            if (S.assets) for (const v of p.versoes || []) { try { await S.assets.delete(v.arquivo); } catch (e) { console.warn(e); } }
-            if (p.postId && S.posts.some((x) => x.id === p.postId)) await salvarPost(p.postId, { projetoId: null });
-            await S.db.doc(`projetos/${p.id}`).delete();
-            S.aberto = null; toast("Projeto excluído");
-          }) }, "Confirmar exclusão")));
-      } }, "Excluir projeto");
-      zona.append(excluir); body.append(zona);
-    }
-    $("#form-nota").hidden = !S.canWrite;
-    resolverPessoas(body);
+    poe(corpo, ...partes);
+    resolverPessoas(corpo);
   }
-
-  $("#form-projeto").addEventListener("submit", async (ev) => {
-    ev.preventDefault();
-    if (!S.db) return toast("Abra a Central no claude.ai para salvar.");
-    const titulo = $("#np-titulo").value.trim(); if (!titulo) return;
-    let novoId = null;
-    const ok = await salvando($("#np-salvar"), async () => {
+  async function comecarVideo(btn) {
+    const f = S.ficha; const p = f && postPorId(f.id); if (!p || !S.db || p.projetoId) return;
+    const titulo = $("#f-titulo").value.trim() || p.titulo || "Sem título";
+    const ideia = $("#f-ideia").value.trim(); const legenda = $("#f-legenda").value.trim();
+    const fmt = formatoDe(valorAtual(p, "formato")); const data = deIso(valorAtual(p, "data")) ? valorAtual(p, "data") : null; const hora = valorAtual(p, "hora");
+    const partes = [];
+    if (p.clienteId) partes.push(`Cliente: ${nomeCliente(p.clienteId)}` + (p.contaId ? ` (@${(S.contas.find((c) => c.id === p.contaId) || {}).username || "conta"})` : "") + ".");
+    if (ideia) partes.push("Ideia / roteiro:\n" + ideia);
+    if (legenda) partes.push("Legenda do post:\n" + legenda);
+    partes.push(`Post: ${fmt ? fmt.nome : "vídeo"}, ${data ? dataLonga(data) + (hora ? " às " + hora : "") : "ainda sem data"}.`);
+    const est = estiloDoCliente(p.clienteId);
+    const ok = await salvando(btn, async () => {
+      await descarregar("posts/" + p.id);
       const ref = await S.db.collection("projetos").add({
-        titulo, briefing: $("#np-briefing").value.trim(), estiloId: $("#np-estilo").value || null,
-        status: "bruto", responsavel: S.myId, storyboard: [], storyboardResumo: "", versoes: [],
-        criadoPor: S.myId, criadoEm: agora(), atualizadoEm: agora(),
+        titulo, briefing: partes.join("\n\n"), estiloId: est ? est.id : null, status: "bruto",
+        responsavel: valorAtual(p, "responsavel") || S.myId, storyboard: [], storyboardResumo: "", versoes: [],
+        postId: p.id, clienteId: p.clienteId || null, criadoPor: S.myId, criadoEm: agora(), atualizadoEm: agora(),
       });
-      novoId = ref.id;
+      const campos = { projetoId: ref.id };
+      if (["ideia", "roteiro"].includes(statusPost(valorAtual(p, "status")).id)) campos.status = "producao";
+      await gravarPost(p.id, campos);
     });
-    if (ok) { $("#np-titulo").value = ""; $("#np-briefing").value = ""; $("#novo-projeto").open = false; toast("Projeto criado"); if (novoId) abrirProjeto(novoId); }
-  });
-
-  $("#form-nota").addEventListener("submit", async (ev) => {
+    if (ok) toast("Edição de vídeo começada. Mande o bruto pro Claude com o pedido desta ficha.");
+  }
+  $("#fv-nota").addEventListener("submit", async (ev) => {
     ev.preventDefault();
-    const p = S.projetos.find((x) => x.id === S.aberto); if (!p || !S.db) return;
-    const texto = $("#nota-texto").value.trim(); if (!texto) return;
-    const v = videoAtual(); const marcar = $("#nota-tempo").checked && v;
-    const ok = await salvando($("#nota-enviar"), async () => {
-      await S.db.collection(`projetos/${p.id}/notas`).add({
+    const p = S.ficha && postPorId(S.ficha.id); const pr = p && p.projetoId ? S.projetos.find((x) => x.id === p.projetoId) : null;
+    if (!pr || !S.db) return;
+    const texto = $("#fv-nota-texto").value.trim(); if (!texto) return;
+    const v = videoAtual(); const marcar = $("#fv-nota-tempo").checked && v;
+    const ok = await salvando($("#fv-nota-enviar"), async () => {
+      await S.db.collection(`projetos/${pr.id}/notas`).add({
         texto, autor: S.myId, porClaude: false, criadoEm: agora(), resolvida: false,
         tempo: marcar ? Math.round(v.currentTime * 10) / 10 : null, versao: marcar ? Number(v.dataset.n) : null,
       });
-      await S.db.doc(`projetos/${p.id}`).update({ atualizadoEm: agora() });
+      await emFila("projetos/" + pr.id, () => S.db.doc(`projetos/${pr.id}`).update({ atualizadoEm: agora() }));
     });
-    if (ok) { $("#nota-texto").value = ""; toast("Comentário enviado"); }
+    if (ok) { $("#fv-nota-texto").value = ""; toast("Comentário enviado"); }
   });
 
   // ---------- ESTILOS ----------
   function renderListaEstilos() {
     const el = $("#style-list"); el.replaceChildren();
-    for (const e of [...S.estilos].sort((a, b) => (b.padrao ? 1 : 0) - (a.padrao ? 1 : 0) || (a.nome || "").localeCompare(b.nome || ""))) {
+    const visiveis = estilosNoEscopo();
+    for (const e of [...visiveis].sort((a, b) => (b.padrao ? 1 : 0) - (a.padrao ? 1 : 0) || (a.nome || "").localeCompare(b.nome || ""))) {
       el.append(h("button", { class: "style-item", type: "button", "aria-current": S.estiloSel === e.id ? "true" : "false", onclick: () => selecionarEstilo(e.id) },
         h("span", { class: "swatches" }, h("i", { style: `background:${cor(e.destaque, PADRAO.destaque)}` }), h("i", { style: `background:${cor(e.fundoCartela, PADRAO.fundoCartela)}` }), h("i", { style: `background:${cor(e.corTexto, PADRAO.corTexto)}` })),
-        h("span", { style: "min-width:0" }, h("b", null, e.nome || "Sem nome"), h("span", null, e.padrao ? "Padrão · " + quando(e.atualizadoEm) : quando(e.atualizadoEm)))));
+        h("span", { style: "min-width:0" }, h("b", null, e.nome || "Sem nome"), h("span", null, [e.clienteId ? nomeCliente(e.clienteId) : "Todos os clientes", e.padrao ? "padrão" : null, quando(e.atualizadoEm)].filter(Boolean).join(" · ")))));
     }
-    const vazio = S.loaded.estilos && !S.estilos.length && !S.rascunho;
+    const vazio = S.loaded.estilos && !visiveis.length && !S.rascunho;
     $("#estilo-empty").hidden = !vazio;
     $("#form-estilo").hidden = !S.rascunho;
     if (!S.loaded.estilos) { $("#estilo-empty").hidden = false; $("#estilo-empty").replaceChildren(h("strong", null, "Carregando estilos…"), "Buscando os estilos da equipe."); }
-    else $("#estilo-empty").replaceChildren(h("strong", null, "Nenhum estilo ainda"), "Crie o primeiro estilo da equipe com o botão “Novo estilo”.");
+    else $("#estilo-empty").replaceChildren(h("strong", null, clienteEmFoco() ? "Nenhum estilo deste cliente" : "Nenhum estilo ainda"), "Crie o estilo de edição com o botão “Novo estilo”.");
     $("#novo-estilo").hidden = !S.canWrite;
   }
+  function estilosNoEscopo() { return S.estilos.filter((e) => !S.cli || (S.cli === "_" ? !e.clienteId : !e.clienteId || e.clienteId === S.cli)); }
   function selecionarEstilo(id) {
     const e = estiloPorId(id); if (!e) return;
     S.estiloSel = id; S.rascunho = { ...PADRAO, ...e,
@@ -1139,6 +1288,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     $("#e-destaque").value = r.destaque; $("#e-fundo").value = r.fundoCartela; $("#e-texto").value = r.corTexto;
     $("#e-tamanho").value = r.tamanhoLegenda; $("#e-enq").value = r.enquadramentoDividida;
     $("#e-regras").value = r.regras || ""; $("#e-padrao").checked = !!r.padrao;
+    $("#e-cliente").dataset.assin = ""; opcoesClientes($("#e-cliente"), r.clienteId || "", "Todos os clientes");
     atualizarRotulos();
     $("#e-info").textContent = r.atualizadoEm ? `Salvo ${quando(r.atualizadoEm)}.` : "Ainda não salvo.";
     const ro = !S.canWrite;
@@ -1157,7 +1307,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     const r = S.rascunho; if (!r) return;
     r.nome = $("#e-nome").value; r.destaque = $("#e-destaque").value; r.fundoCartela = $("#e-fundo").value; r.corTexto = $("#e-texto").value;
     r.tamanhoLegenda = Number($("#e-tamanho").value); r.enquadramentoDividida = Number($("#e-enq").value);
-    r.regras = $("#e-regras").value; r.padrao = $("#e-padrao").checked;
+    r.regras = $("#e-regras").value; r.padrao = $("#e-padrao").checked; r.clienteId = $("#e-cliente").value || null;
     atualizarRotulos(); renderPrevia();
   }
   $("#form-estilo").addEventListener("input", lerForm);
@@ -1172,7 +1322,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   function corpoEstilo(r) {
     return { nome: (r.nome || "").trim() || "Estilo sem nome", padrao: !!r.padrao, destaque: r.destaque, fundoCartela: r.fundoCartela, corTexto: r.corTexto,
       palavrasPorLegenda: Number(r.palavrasPorLegenda), tamanhoLegenda: Number(r.tamanhoLegenda), enquadramentoDividida: Number(r.enquadramentoDividida),
-      logo: r.logo || null, regras: r.regras || "", atualizadoPor: S.myId, atualizadoEm: agora() };
+      logo: r.logo || null, regras: r.regras || "", clienteId: r.clienteId || null, atualizadoPor: S.myId, atualizadoEm: agora() };
   }
   $("#form-estilo").addEventListener("submit", async (ev) => {
     ev.preventDefault(); if (!S.db || !S.rascunho) return;
@@ -1181,12 +1331,14 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       const corpo = corpoEstilo(S.rascunho);
       if (id) await S.db.doc(`estilos/${id}`).set(corpo);
       else { const ref = await S.db.collection("estilos").add(corpo); id = ref.id; }
-      if (corpo.padrao) for (const o of S.estilos) if (o.id !== id && o.padrao) await S.db.doc(`estilos/${o.id}`).update({ padrao: false });
+      // um padrão por cliente (ou um geral, para estilos sem cliente)
+      if (corpo.padrao) for (const o of S.estilos) if (o.id !== id && o.padrao && (o.clienteId || null) === corpo.clienteId) await S.db.doc(`estilos/${o.id}`).update({ padrao: false });
+      if (corpo.clienteId) { const c = clientePorId(corpo.clienteId); if (c && (corpo.padrao ? c.estiloId !== id : c.estiloId === id)) await emFila("clientes/" + c.id, () => S.db.doc("clientes/" + c.id).update({ estiloId: corpo.padrao ? id : null })); }
     });
     if (ok) { S.estiloSel = id; S.rascunho.atualizadoEm = agora(); $("#e-info").textContent = "Salvo agora."; toast("Estilo salvo"); }
   });
   $("#e-duplicar").addEventListener("click", () => { if (!S.rascunho) return; S.rascunho = { ...S.rascunho, nome: (S.rascunho.nome || "Estilo") + " (cópia)", padrao: false, atualizadoEm: null }; S.estiloSel = null; preencherForm(); renderListaEstilos(); toast("Cópia criada. Salve para guardar."); });
-  $("#novo-estilo").addEventListener("click", () => { S.estiloSel = null; S.rascunho = { ...PADRAO, nome: "Novo estilo", regras: "", padrao: !S.estilos.length, logo: null }; preencherForm(); renderListaEstilos(); renderPrevia(); $("#e-nome").focus(); });
+  $("#novo-estilo").addEventListener("click", () => { const cid = clienteEmFoco(); S.estiloSel = null; S.rascunho = { ...PADRAO, nome: cid ? "Estilo " + nomeCliente(cid) : "Novo estilo", regras: "", clienteId: cid, padrao: !S.estilos.some((e) => (e.clienteId || null) === cid && e.padrao), logo: null }; preencherForm(); renderListaEstilos(); renderPrevia(); $("#e-nome").focus(); });
   $("#e-excluir").addEventListener("click", (ev) => {
     const btn = ev.currentTarget;
     if (!S.estiloSel) { S.rascunho = null; renderListaEstilos(); return; }
@@ -1229,8 +1381,9 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   function renderRefs() {
     const el = $("#refs"); el.replaceChildren();
     if (!S.loaded.referencias) { el.append(h("div", { class: "empty" }, h("strong", null, "Carregando referências…"), "Buscando a biblioteca da equipe.")); return; }
-    if (!S.refs.length) { el.append(h("div", { class: "empty" }, h("strong", null, "Biblioteca vazia"), "Adicione os vídeos que o time usa de inspiração. Até 20 MB por arquivo, ou só o link.")); return; }
-    for (const r of [...S.refs].sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""))) {
+    const visiveis = S.refs.filter((r) => !S.cli || (S.cli === "_" ? !r.clienteId : !r.clienteId || r.clienteId === S.cli));
+    if (!visiveis.length) { el.append(h("div", { class: "empty" }, h("strong", null, S.refs.length ? "Nenhuma referência deste cliente" : "Biblioteca vazia"), "Adicione os vídeos que o time usa de inspiração. Até 20 MB por arquivo, ou só o link.")); return; }
+    for (const r of [...visiveis].sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""))) {
       let media;
       if (r.arquivo && r.tipoArquivo === "video") media = h("video", { controls: true, playsinline: true, preload: "metadata", src: blob(r.arquivo) });
       else if (r.arquivo) media = h("img", { src: blob(r.arquivo), alt: r.titulo || "Referência", loading: "lazy" });
@@ -1242,6 +1395,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
           r.criador ? h("span", { class: "hint" }, r.criador) : null,
           r.link && /^https?:\/\//.test(r.link) ? h("a", { href: r.link, target: "_blank", rel: "noopener noreferrer" }, "Abrir original ↗") : null,
           r.notas ? h("p", null, r.notas) : null,
+          !S.cli && r.clienteId ? marcaCliente(r.clienteId) : null,
           (r.tags || []).length || est ? h("div", { class: "tags" }, est ? h("span", { class: "chip" }, "Estilo: " + est.nome) : null, (r.tags || []).map((t) => h("span", { class: "chip" }, t))) : null,
           h("small", { class: "hint", style: "display:flex;gap:6px;align-items:center;flex-wrap:wrap" }, pessoa(r.adicionadoPor, r.porClaude, "Equipe"), quando(r.criadoEm)),
           S.canWrite ? h("button", { class: "btn danger ghost", type: "button", style: "justify-self:start;padding-inline:0", onclick: (ev) => {
@@ -1272,7 +1426,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
         const up = await S.assets.upload(f); arquivo = up.id; tipoArquivo = f.type.startsWith("video") ? "video" : "imagem";
       }
       await S.db.collection("referencias").add({
-        titulo, criador: $("#r-criador").value.trim(), link, arquivo, tipoArquivo, estiloId: $("#r-estilo").value || null,
+        titulo, criador: $("#r-criador").value.trim(), link, arquivo, tipoArquivo, estiloId: $("#r-estilo").value || null, clienteId: $("#r-cliente").value || null,
         tags: $("#r-tags").value.split(",").map((t) => t.trim()).filter(Boolean).slice(0, 12),
         notas: $("#r-notas").value.trim(), adicionadoPor: S.myId, porClaude: false, criadoEm: agora(),
       });
@@ -1285,10 +1439,13 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     { id: "ideia", nome: "Ideia" },
     { id: "roteiro", nome: "Roteiro" },
     { id: "producao", nome: "Produção" },
-    { id: "pronto", nome: "Pronto" },
+    { id: "revisao", nome: "Revisão" },
+    { id: "aprovado", nome: "Aprovado" },
     { id: "agendado", nome: "Agendado" },
     { id: "publicado", nome: "Publicado" },
+    { id: "arquivado", nome: "Arquivado" },
   ];
+  const STATUS_ANTIGOS = { pronto: "aprovado" }; // posts antigos continuam abrindo certo
   const FORMATOS = [
     { id: "reels", nome: "Reels", video: true },
     { id: "carrossel", nome: "Carrossel" },
@@ -1324,6 +1481,12 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     sobe: '<path d="M12 19V5M6 11l6-6 6 6"/>',
     desce: '<path d="M12 5v14M6 13l6 6 6-6"/>',
     alerta: '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/>',
+    casa: '<path d="M4 11l8-6.5 8 6.5"/><path d="M6 9.5V19h12V9.5"/><path d="M10 19v-5h4v5"/>',
+    calendario: '<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+    quadro: '<rect x="3.5" y="4.5" width="5" height="15" rx="1.5"/><rect x="10.5" y="4.5" width="5" height="10" rx="1.5"/><rect x="17.5" y="4.5" width="3" height="6" rx="1.2"/>',
+    grafico: '<path d="M4 20h16"/><path d="M7 16v-5M12 16V7M17 16v-8"/>',
+    engrenagem: '<circle cx="12" cy="12" r="3"/><path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M6 6l1.6 1.6M16.4 16.4L18 18M6 18l1.6-1.6M16.4 7.6L18 6"/>',
+    mais3: '<circle cx="6" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="18" cy="12" r="1.4" fill="currentColor"/>',
   };
   function icone(nome) {
     const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -1348,7 +1511,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     return `${a.getDate()} de ${mes(a, "short")} a ${b.getDate()} de ${mes(b, "short")}`;
   }
 
-  const statusPost = (id) => PSTATUS.find((s) => s.id === id) || PSTATUS[0];
+  const statusPost = (id) => PSTATUS.find((s) => s.id === (STATUS_ANTIGOS[id] || id)) || PSTATUS[0];
   const formatoDe = (id) => FORMATOS.find((f) => f.id === id) || null;
   const postPorId = (id) => S.posts.find((p) => p.id === id);
   const redePadrao = (fmt) => (fmt === "tiktok" ? "tiktok" : "instagram");
@@ -1395,9 +1558,11 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     if (estado === "salvo" || el.textContent === "Salvando…") { el.textContent = "Salvo"; el.dataset.kind = ""; }
   }
   async function criarPost(campos) {
+    const cid = campos.clienteId !== undefined ? campos.clienteId : clienteEmFoco();
     const ref = await S.db.collection("posts").add({
       titulo: "", ideia: "", legenda: "", formato: null, redes: [], data: null, hora: null, status: "ideia",
       responsavel: null, tags: [], anexos: [], referencias: [], projetoId: null, agendamento: { ...AGENDAMENTO_VAZIO },
+      clienteId: cid || null, contaId: contaPadrao(cid), prazo: null, aprovacao: null, midiaId: null,
       criadoPor: S.myId, criadoEm: agora(), atualizadoEm: agora(), ...campos,
     });
     return ref.id;
@@ -1430,6 +1595,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   function filtrosAtivos() { const f = S.cal.filtros; return [f.rede, f.formato, f.resp, f.status].filter(Boolean).length; }
   function passa(p, semStatus) {
     const f = S.cal.filtros;
+    if (!noEscopo(p.clienteId) || statusPost(p.status).id === "arquivado") return false;
     if (f.rede && !(p.redes || []).includes(f.rede)) return false;
     if (f.formato && (f.formato === "_" ? !!p.formato : p.formato !== f.formato)) return false;
     if (f.resp && (f.resp === "_" ? !!p.responsavel : p.responsavel !== f.resp)) return false;
@@ -1439,16 +1605,16 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   const postsFiltrados = () => S.posts.filter((p) => passa(p, false));
   function renderFiltros() {
     const f = S.cal.filtros;
-    const base = S.posts.filter((p) => passa(p, true));
+    const base = S.posts.filter((p) => passa(p, true)); const noCalendario = PSTATUS.filter((st) => st.id !== "arquivado");
     $("#cal-status").replaceChildren(
       h("button", { class: "stf todos", type: "button", "aria-pressed": String(!f.status), onclick: () => { f.status = ""; renderCalendario(); } }, "Todos ", h("b", null, base.length)),
-      ...PSTATUS.map((st) => h("button", { class: "stf", type: "button", style: `--c: var(--ps-${st.id})`, "aria-pressed": String(f.status === st.id),
+      ...noCalendario.map((st) => h("button", { class: "stf", type: "button", style: `--c: var(--ps-${st.id})`, "aria-pressed": String(f.status === st.id),
         onclick: () => { f.status = f.status === st.id ? "" : st.id; renderCalendario(); } }, st.nome + " ", h("b", null, base.filter((p) => statusPost(p.status).id === st.id).length))));
     $("#fl-rede").value = f.rede; $("#fl-formato").value = f.formato;
     opcoesPessoas($("#fl-resp"), () => S.cal.filtros.resp, [["", "Todos os responsáveis"], ["_", "Sem responsável"]]);
     const n = filtrosAtivos();
     $("#fl-limpar").hidden = !n; $("#cal-filtros-n").hidden = !n; $("#cal-filtros-n").textContent = String(n);
-    $("#fl-info").textContent = n ? `${postsFiltrados().length} de ${S.posts.length} posts` : "";
+    $("#fl-info").textContent = n ? `${postsFiltrados().length} de ${S.posts.filter((p) => noEscopo(p.clienteId) && statusPost(p.status).id !== "arquivado").length} posts` : "";
   }
 
   // ----- Cartões -----
@@ -1456,7 +1622,17 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     const st = statusPost(p.status); const fmt = formatoDe(p.formato);
     return [p.hora, p.titulo || "Sem título", st.nome, fmt && fmt.nome].filter(Boolean).join(", ");
   }
-  function cartaoPost(p, comHora) {
+  function prazoEl(p) {
+    if (!deIso(p.prazo) || ["publicado", "arquivado"].includes(statusPost(p.status).id)) return null;
+    const atraso = p.prazo < isoDia(new Date()) && ETAPAS_ANTES.includes(statusPost(p.status).id);
+    return h("span", { class: "prazo" + (atraso ? " atraso" : "") }, (atraso ? "prazo vencido · " : "prazo ") + dataCurta(p.prazo));
+  }
+  function vchipDe(p) {
+    const pr = p.projetoId ? S.projetos.find((x) => x.id === p.projetoId) : null; if (!pr) return null;
+    const st = STATUS.find((x) => x.id === pr.status) || STATUS[0];
+    return h("span", { class: "vchip", style: `--c2: var(--st-${st.id})`, title: "Etapa da edição de vídeo" }, icone("filme"), "vídeo: " + st.nome.toLowerCase());
+  }
+  function cartaoPost(p, comHora, comData) {
     const st = statusPost(p.status);
     const nAnexos = (p.anexos || []).length, nRefs = (p.referencias || []).length;
     const redes = (p.redes || []).map((r) => (REDES.find((x) => x.id === r) || {}).curto).filter(Boolean).join(" · ");
@@ -1464,13 +1640,13 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       icone(p.formato || "nenhum"),
       h("b", null, p.titulo || "Sem título"),
       h("div", { class: "pmeta" },
-        comHora && p.hora ? h("span", { class: "hr" }, p.hora) : null,
-        pillPost(p.status),
+        !S.cli && p.clienteId ? marcaCliente(p.clienteId) : null,
+        comData ? h("span", { class: "hr" }, deIso(p.data) ? dataCurta(p.data) + (p.hora ? " " + p.hora : "") : "sem data") : comHora && p.hora ? h("span", { class: "hr" }, p.hora) : null,
+        pillPost(p.status), vchipDe(p), prazoEl(p),
         redes ? h("span", { class: "mono" }, redes) : null,
         (p.tags || []).slice(0, 2).map((t) => h("span", { class: "chip" }, t)),
         nAnexos ? h("span", { class: "cont", title: "Anexos" }, icone("clipe"), nAnexos) : null,
         nRefs ? h("span", { class: "cont", title: "Referências" }, icone("ref"), nRefs) : null,
-        p.projetoId ? h("span", { class: "cont", title: "Virou projeto de vídeo" }, icone("filme"), "projeto") : null,
         p.responsavel ? pessoa(p.responsavel, false) : null));
   }
   function chipPost(p) {
@@ -1478,7 +1654,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     return h("div", { class: "pc", role: "button", tabindex: "0", "data-id": p.id, style: `--c: var(--ps-${st.id})`, draggable: podeArrastar() ? "true" : null,
       title: [p.titulo || "Sem título", st.nome, fmt && fmt.nome].filter(Boolean).join(" · "), "aria-label": rotuloPost(p) },
       icone(p.formato || "nenhum"),
-      h("span", { class: "tt" }, p.titulo || "Sem título"),
+      h("span", { class: "tt" }, !S.cli && p.clienteId ? [dotCliente(p.clienteId), " "] : null, p.titulo || "Sem título"),
       p.hora ? h("span", { class: "hr" }, p.hora) : null);
   }
   const ordemDia = (a, b) => (a.hora || "99").localeCompare(b.hora || "99") || (a.titulo || "").localeCompare(b.titulo || "", "pt-BR");
@@ -1497,28 +1673,27 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       h("ol", null,
         h("li", null, "Escreva a primeira ideia no campo acima e toque em Guardar. Só o título basta."),
         h("li", null, "Toque na ideia para abrir a ficha: roteiro, legenda, formato, anexos e referências."),
-        h("li", null, mqMouse.matches ? "Arraste a ideia até um dia do calendário para marcar a data." : "Escolha a data na ficha, ou toque no + de um dia para criar um post já com data.")));
+        h("li", null, "Quando decidir, toque em “Para produção” ou mande para o arquivo.")));
   }
-  function renderCaixa(vis) {
-    const el = $("#ideias"); el.replaceChildren();
-    const ideias = vis.filter((p) => !deIso(p.data)).sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
-    const total = S.posts.filter((p) => !deIso(p.data)).length;
-    $("#ideias-n").textContent = S.loaded.posts && S.posts.length ? (filtrosAtivos() ? `${ideias.length} de ${total}` : String(total)) : "";
-    $("#form-ideia").hidden = !S.canWrite;
-    if (!S.loaded.posts) { el.append(h("div", { class: "empty" }, h("strong", null, "Carregando ideias…"), "Buscando o calendário da equipe.")); return; }
-    if (!S.posts.length) { el.append(vazioCalendario()); return; }
-    if (!ideias.length) { el.append(h("p", { class: "hint" }, filtrosAtivos() ? "Nenhuma ideia sem data com esses filtros." : "Todas as ideias já têm data. Guarde a próxima no campo acima.")); return; }
-    const limite = mqCel.matches && !S.cal.todasIdeias ? 4 : Infinity;
-    for (const p of ideias.slice(0, limite)) el.append(cartaoPost(p, false));
-    if (ideias.length > limite) el.append(h("button", { class: "btn ghost", type: "button", onclick: () => { S.cal.todasIdeias = true; renderCalendario(); } }, `Ver todas as ${ideias.length} ideias`));
+  function renderSemData(vis) {
+    const el = $("#semdata"); el.replaceChildren();
+    $("#caixa").hidden = mqCel.matches;
+    const lista = vis.filter((p) => !deIso(p.data) && statusPost(p.status).id !== "publicado").sort((a, b) => (b.atualizadoEm || "").localeCompare(a.atualizadoEm || ""));
+    $("#semdata-n").textContent = S.loaded.posts ? String(lista.length) : "";
+    $("#semdata-dica").textContent = podeArrastar() ? "Arraste para um dia do calendário." : "Abra a ficha para escolher a data.";
+    if (!S.loaded.posts) { el.append(h("div", { class: "empty" }, h("strong", null, "Carregando…"), "Buscando o calendário da equipe.")); return; }
+    if (!lista.length) { el.append(h("p", { class: "hint" }, "Tudo tem data. As ideias novas ficam em Ideias.")); return; }
+    for (const p of lista.slice(0, 40)) el.append(cartaoPost(p, false));
+    if (lista.length > 40) el.append(h("a", { class: "link-acao", href: "#ideias" }, `Ver todas as ${lista.length} em Ideias e Produção`));
     resolverPessoas(el);
   }
   $("#form-ideia").addEventListener("submit", async (ev) => {
     ev.preventDefault();
     if (!S.db) return toast("Abra a Central no claude.ai para salvar.");
     const titulo = $("#ideia-titulo").value.trim(); if (!titulo) return;
-    const ok = await salvando($("#ideia-add"), () => criarPost({ titulo }));
-    if (ok) { $("#ideia-titulo").value = ""; $("#ideia-titulo").focus(); toast(filtrosAtivos() ? "Ideia guardada (os filtros podem escondê-la)" : "Ideia guardada"); }
+    const cid = S.cli ? clienteEmFoco() : ($("#ideia-cliente").value || null);
+    const ok = await salvando($("#ideia-add"), () => criarPost({ titulo, clienteId: cid }));
+    if (ok) { $("#ideia-titulo").value = ""; $("#ideia-titulo").focus(); toast(cid ? `Ideia guardada em ${nomeCliente(cid)}` : "Ideia guardada (sem cliente)"); }
   });
 
   // ----- Mês (computador) e semana (celular) -----
@@ -1566,7 +1741,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     S.cal.renderPendente = false;
     renderFiltros();
     const vis = postsFiltrados();
-    renderCaixa(vis);
+    renderSemData(vis);
     if (mqCel.matches) renderSemana(vis); else renderMes(vis);
     if (S.ficha) atualizarFicha();
   }
@@ -1635,6 +1810,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     const f = S.ficha; if (!f) return;
     if (f.unsub) f.unsub();
     if (f.id && !f.excluido) descarregar("posts/" + f.id).catch((e) => { console.error(e); toast(erroMsg(e)); });
+    soltarNotas();
     S.ficha = null;
   }
   function prepararFicha(estado) {
@@ -1643,10 +1819,11 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     const dlg = $("#ficha");
     dlg.dataset.modo = estado.id ? "editar" : "novo";
     if (document.activeElement && dlg.contains(document.activeElement)) document.activeElement.blur();
-    for (const sel of ["#f-anexos", "#f-refs", "#f-ref-lista"]) $(sel).dataset.assin = "";
-    for (const sel of ["#f-titulo", "#f-ideia", "#f-legenda", "#f-data", "#f-hora", "#f-coment", "#f-ref-busca", "#f-resp-busca", "#f-tag-nova"]) $(sel).value = "";
+    for (const sel of ["#f-anexos", "#f-refs", "#f-ref-lista", "#fv-corpo", "#f-cliente", "#f-conta"]) $(sel).dataset.assin = "";
+    for (const sel of ["#f-titulo", "#f-ideia", "#f-legenda", "#f-data", "#f-hora", "#f-prazo", "#f-coment", "#f-ref-busca", "#f-resp-busca", "#f-tag-nova", "#fv-nota-texto"]) $(sel).value = "";
+    $("#fv-nota-tempo-val").textContent = "";
     $("#form-f-ref").reset(); $("#f-ref-nova").open = false; $("#f-ref-bib").open = false; $("#f-resp-outro").open = false; $("#f-resp-res").replaceChildren();
-    for (const sel of ["#f-estado", "#f-status", "#f-formato", "#f-redes", "#f-tags", "#f-projeto", "#f-anexos", "#f-refs", "#f-ref-lista", "#f-criado", "#f-coments"]) $(sel).replaceChildren();
+    for (const sel of ["#f-estado", "#f-status", "#f-formato", "#f-redes", "#f-tags", "#fv-corpo", "#f-anexos", "#f-refs", "#f-ref-lista", "#f-criado", "#f-coments"]) $(sel).replaceChildren();
     $("#f-salvo").textContent = ""; $("#f-salvo").dataset.kind = "";
     const ex = $("#f-excluir"); ex.dataset.confirmar = ""; ex.textContent = "Excluir post";
     if (!dlg.open) { dlg.showModal(); document.documentElement.classList.add("trava"); }
@@ -1667,7 +1844,8 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   function novaFicha(data) {
     if (!S.db) return toast("Abra a Central no claude.ai para salvar.");
     if (!S.canWrite) return;
-    prepararFicha({ id: null, novo: { formato: null }, coments: [], enviando: 0 });
+    const cid = clienteEmFoco();
+    prepararFicha({ id: null, novo: { formato: null, clienteId: cid, contaId: contaPadrao(cid) }, coments: [], enviando: 0 });
     $("#f-data").value = data || "";
     atualizarFicha();
     $("#f-titulo").focus();
@@ -1689,8 +1867,8 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     const f = S.ficha; if (!f) return;
     const ro = !S.canWrite;
     if (!f.id) {
-      $("#f-estado").replaceChildren(h("b", null, "Novo post"));
-      renderFormatos(f.novo.formato);
+      $("#f-estado").replaceChildren(h("b", null, "Novo conteúdo"));
+      renderFormatos(f.novo.formato); renderClienteConta(f.novo.clienteId, f.novo.contaId);
       return;
     }
     const p = postPorId(f.id);
@@ -1707,13 +1885,15 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     sincronizar("#f-legenda", v("legenda"), "legenda");
     sincronizar("#f-data", dataOk, "data");
     sincronizar("#f-hora", v("hora"), "hora");
+    sincronizar("#f-prazo", deIso(v("prazo")) ? v("prazo") : null, "prazo");
+    renderClienteConta(v("clienteId"), v("contaId"));
     contarLegenda();
     $("#f-sem-data").hidden = !dataOk || ro;
     renderStatusFicha(st.id); renderFormatos(v("formato")); renderRedes(v("redes") || []);
     opcoesPessoas($("#f-resp"), () => { const q = S.ficha && postPorId(S.ficha.id); return q ? valorAtual(q, "responsavel") : null; }, [["", "Sem responsável"]]);
     $("#f-resp-eu").hidden = ro || !S.myId || v("responsavel") === S.myId;
     $("#f-resp-outro").hidden = ro || !S.user;
-    renderTagsFicha(p); renderProjetoFicha(p); renderAnexos(p); renderRefsFicha(p);
+    renderTagsFicha(p); renderVideo(p); renderAnexos(p); renderRefsFicha(p);
     const ag = p.agendamento || AGENDAMENTO_VAZIO;
     $("#f-ag-status").textContent = ROTULO_AGENDAMENTO[ag.status] || ROTULO_AGENDAMENTO.nao_agendado;
     $("#f-criado").replaceChildren("Criado por", pessoa(p.criadoPor, false, "alguém do time"), quando(p.criadoEm));
@@ -1758,7 +1938,28 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     salvarPost(f.id, v ? { data: v } : { data: null, hora: null }); atualizarFicha();
   });
   $("#f-hora").addEventListener("change", (ev) => { const f = S.ficha; if (!f || !f.id) return; salvarPost(f.id, { hora: ev.target.value || null }); atualizarFicha(); });
-  $("#f-sem-data").addEventListener("click", () => { const f = S.ficha; if (!f || !f.id) return; salvarPost(f.id, { data: null, hora: null }).then((ok) => ok && toast("Voltou para a caixa de ideias")); $("#f-data").value = ""; $("#f-hora").value = ""; atualizarFicha(); });
+  $("#f-sem-data").addEventListener("click", () => { const f = S.ficha; if (!f || !f.id) return; salvarPost(f.id, { data: null, hora: null }).then((ok) => ok && toast("Data tirada")); $("#f-data").value = ""; $("#f-hora").value = ""; atualizarFicha(); });
+  $("#f-prazo").addEventListener("change", (ev) => { const f = S.ficha; if (!f || !f.id) return; salvarPost(f.id, { prazo: ev.target.value || null }); atualizarFicha(); });
+  // Cliente e conta do conteúdo
+  function renderClienteConta(cid, contaId) {
+    opcoesClientes($("#f-cliente"), cid || "", "Sem cliente");
+    const contas = cid ? contasDoCliente(cid) : S.contas.filter((c) => c.ativa !== false).sort(ordemPor);
+    const itens = [["", "Sem conta"], ...contas.map((c) => [c.id, "@" + (c.username || "conta")])];
+    if (contaId && !itens.some(([x]) => x === contaId)) { const c = S.contas.find((x) => x.id === contaId); itens.push([contaId, "@" + ((c && c.username) || "conta")]); }
+    const sel = $("#f-conta"); const assin = JSON.stringify(itens);
+    if (sel.dataset.assin !== assin) { sel.replaceChildren(...itens.map(([v, t]) => h("option", { value: v }, t))); sel.dataset.assin = assin; }
+    if (document.activeElement !== sel) sel.value = contaId || "";
+  }
+  $("#f-cliente").addEventListener("change", (ev) => {
+    const f = S.ficha; if (!f) return; const cid = ev.target.value || null; const conta = contaPadrao(cid);
+    if (!f.id) { f.novo.clienteId = cid; f.novo.contaId = conta; atualizarFicha(); return; }
+    salvarPost(f.id, { clienteId: cid, contaId: conta }); atualizarFicha();
+  });
+  $("#f-conta").addEventListener("change", (ev) => {
+    const f = S.ficha; if (!f) return; const v = ev.target.value || null;
+    if (!f.id) { f.novo.contaId = v; return; }
+    salvarPost(f.id, { contaId: v }); atualizarFicha();
+  });
   $("#f-criar").addEventListener("click", criarDaFicha);
   async function criarDaFicha() {
     const f = S.ficha; if (!f || f.id) return;
@@ -1768,8 +1969,9 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     const hora = data && $("#f-hora").value ? $("#f-hora").value : null;
     const formato = f.novo.formato;
     let id = null;
-    const ok = await salvando($("#f-criar"), async () => { id = await criarPost({ titulo, data, hora, formato, redes: formato ? [redePadrao(formato)] : [] }); });
-    if (ok && id && S.ficha === f) { abrirFicha(id, true); toast("Post criado"); }
+    const ok = await salvando($("#f-criar"), async () => { id = await criarPost({ titulo, data, hora, formato, redes: formato ? [redePadrao(formato)] : [],
+      clienteId: f.novo.clienteId || null, contaId: f.novo.contaId || null, status: data ? "roteiro" : "ideia" }); });
+    if (ok && id && S.ficha === f) { abrirFicha(id, true); toast("Conteúdo criado"); }
   }
 
   function renderStatusFicha(atual) {
@@ -1830,49 +2032,6 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     const p = S.ficha && postPorId(S.ficha.id); if (!t || !p) return;
     if (!(valorAtual(p, "tags") || []).includes(t)) alternarTag(t);
   });
-
-  // Projeto de vídeo ligado
-  function renderProjetoFicha(p) {
-    const box = $("#f-projeto"); box.replaceChildren();
-    const pid = p.projetoId; const fmt = formatoDe(valorAtual(p, "formato"));
-    box.hidden = !pid && !(fmt && fmt.video);
-    if (box.hidden) return;
-    box.append(h("span", { class: "eyebrow" }, "Projeto de vídeo"));
-    if (pid) {
-      const pr = S.projetos.find((x) => x.id === pid);
-      if (pr) box.append(h("div", { class: "proj-link" }, pill(pr.status), h("b", null, pr.titulo || "Sem título"),
-        (pr.versoes || []).length ? h("span", { class: "hint" }, pr.versoes.length === 1 ? "1 versão" : `${pr.versoes.length} versões`) : null,
-        h("button", { class: "btn", type: "button", style: "margin-left:auto", onclick: () => irParaProjeto(pid) }, "Abrir projeto")));
-      else if (S.loaded.projetos) box.append(h("p", { class: "hint" }, "O projeto ligado a este post foi excluído."),
-        S.canWrite ? h("button", { class: "btn", type: "button", style: "justify-self:start", onclick: () => { salvarPost(p.id, { projetoId: null }); atualizarFicha(); } }, "Desligar e criar outro") : null);
-      else box.append(h("p", { class: "hint" }, "Carregando o projeto…"));
-    } else {
-      box.append(h("p", { class: "hint" }, "Cria um projeto na aba Projetos com a ideia e a legenda no briefing. Depois é só mandar o vídeo bruto pro Claude editar."),
-        S.canWrite ? h("button", { class: "btn primary", type: "button", style: "justify-self:start", onclick: (ev) => virarProjeto(ev.currentTarget) }, icone("filme"), "Virar projeto de vídeo") : null);
-    }
-  }
-  function irParaProjeto(pid) { fecharFicha(); location.hash = "projetos"; mostrarAba(); abrirProjeto(pid); }
-  async function virarProjeto(btn) {
-    const f = S.ficha; const p = f && postPorId(f.id); if (!p || !S.db || p.projetoId) return;
-    const titulo = $("#f-titulo").value.trim() || p.titulo || "Sem título";
-    const ideia = $("#f-ideia").value.trim(); const legenda = $("#f-legenda").value.trim();
-    const fmt = formatoDe(valorAtual(p, "formato")); const data = deIso(valorAtual(p, "data")) ? valorAtual(p, "data") : null; const hora = valorAtual(p, "hora");
-    const partes = [];
-    if (ideia) partes.push("Ideia / roteiro:\n" + ideia);
-    if (legenda) partes.push("Legenda do post:\n" + legenda);
-    partes.push(`Post do calendário: ${fmt ? fmt.nome : "vídeo"}, ${data ? dataLonga(data) + (hora ? " às " + hora : "") : "ainda sem data"}.`);
-    const est = estiloPadrao();
-    const ok = await salvando(btn, async () => {
-      await descarregar("posts/" + p.id);
-      const ref = await S.db.collection("projetos").add({
-        titulo, briefing: partes.join("\n\n"), estiloId: est ? est.id : null, status: "bruto",
-        responsavel: valorAtual(p, "responsavel") || S.myId, storyboard: [], storyboardResumo: "", versoes: [],
-        postId: p.id, criadoPor: S.myId, criadoEm: agora(), atualizadoEm: agora(),
-      });
-      await gravarPost(p.id, { projetoId: ref.id });
-    });
-    if (ok) toast("Projeto criado na aba Projetos");
-  }
 
   // Anexos
   function renderAnexos(p) {
@@ -1981,7 +2140,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
         const up = await S.assets.upload(arq); arquivo = up.id; tipoArquivo = arq.type.startsWith("video") ? "video" : "imagem";
       }
       const ref = await S.db.collection("referencias").add({
-        titulo, criador: "", link, arquivo, tipoArquivo, estiloId: null, tags: [], notas: $("#fr-notas").value.trim(),
+        titulo, criador: "", link, arquivo, tipoArquivo, estiloId: null, clienteId: p.clienteId || null, tags: [], notas: $("#fr-notas").value.trim(),
         adicionadoPor: S.myId, porClaude: false, criadoEm: agora(),
       });
       const atual = postPorId(f.id) || p;
@@ -2014,8 +2173,8 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   $("#f-excluir").addEventListener("click", async (ev) => {
     const btn = ev.currentTarget; const f = S.ficha; const p = f && postPorId(f.id); if (!p) return;
     if (btn.dataset.confirmar !== "1") {
-      btn.dataset.confirmar = "1"; btn.textContent = "Confirmar exclusão";
-      setTimeout(() => { if (btn.dataset.confirmar === "1") { btn.dataset.confirmar = ""; btn.textContent = "Excluir post"; } }, 4000);
+      btn.dataset.confirmar = "1"; btn.textContent = p.projetoId ? "Confirmar: apaga o post e a edição de vídeo" : "Confirmar exclusão";
+      setTimeout(() => { if (btn.dataset.confirmar === "1") { btn.dataset.confirmar = ""; btn.textContent = "Excluir post"; } }, 5000);
       return;
     }
     btn.dataset.confirmar = "";
@@ -2024,7 +2183,13 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       const snap = await S.db.collection(`${path}/comentarios`).get();
       for (const d of snap.docs) await S.db.doc(`${path}/comentarios/${d.id}`).delete();
       if (S.assets) for (const a of p.anexos || []) { try { await S.assets.delete(a.id); } catch (e) { console.warn(e); } }
-      if (p.projetoId && S.projetos.some((x) => x.id === p.projetoId)) { try { await S.db.doc(`projetos/${p.projetoId}`).update({ postId: null }); } catch (e) { console.warn(e); } }
+      const pr = p.projetoId ? S.projetos.find((x) => x.id === p.projetoId) : null;
+      if (pr) { // post e edição de vídeo são uma coisa só: saem juntos
+        const ns = await S.db.collection(`projetos/${pr.id}/notas`).get();
+        for (const d of ns.docs) await S.db.doc(`projetos/${pr.id}/notas/${d.id}`).delete();
+        if (S.assets) for (const v of pr.versoes || []) { try { await S.assets.delete(v.arquivo); } catch (e) { console.warn(e); } }
+        await emFila("projetos/" + pr.id, () => S.db.doc(`projetos/${pr.id}`).delete());
+      }
       await emFila(path, () => S.db.doc(path).delete());
     });
     btn.textContent = "Excluir post";
@@ -2052,7 +2217,13 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   function contasAtivas() {
     return S.contas.filter((c) => c.ativa !== false).sort((a, b) => (ehNum(a.ordem) ? a.ordem : 99) - (ehNum(b.ordem) ? b.ordem : 99) || (a.username || "").localeCompare(b.username || ""));
   }
-  function contaSel() { const at = contasAtivas(); return at.find((c) => c.id === S.pn.sel) || at[0] || null; }
+  const contasEscopo = () => contasAtivas().filter((c) => noEscopo(c.clienteId)); // contas do cliente em foco
+  function contaSel() { const at = contasEscopo(); return at.find((c) => c.id === S.pn.sel) || at[0] || null; }
+  function renderChipsContas(alvo, at, c, aoEscolher) {
+    poe(alvo, ...at.map((x) => h("button", { class: "conta-btn", type: "button", "aria-pressed": String(!!c && x.id === c.id),
+      onclick: () => { S.pn.sel = x.id; gravarLocal("painel.conta", x.id); aoEscolher(); } },
+      h("b", null, "@" + (x.username || "conta")), h("span", null, [!S.cli && x.clienteId ? nomeCliente(x.clienteId) : null, ehNum(x.seguidores) ? numero(x.seguidores) + " seguidores" : "sem números ainda"].filter(Boolean).join(" · ")))));
+  }
   const analiseDe = (id) => S.analises.find((a) => a.id === id) || null;
 
   // Histórico diário da conta escolhida (para seguidores ao longo do tempo e comparar alcance/engajamento)
@@ -2095,19 +2266,18 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   }
 
   function renderPainel() {
-    const at = contasAtivas(); const c = contaSel();
+    const at = contasEscopo(); const c = contaSel();
     if (c) S.pn.sel = c.id;
     assinarHistorico(c ? c.id : null);
     $("#pn-atualizar").hidden = !(S.pn.podeAtualizar && S.canWrite && S.db && at.length);
-    poe($("#pn-contas"), ...at.map((x) => h("button", { class: "conta-btn", type: "button", "aria-pressed": String(c && x.id === c.id),
-      onclick: () => { S.pn.sel = x.id; gravarLocal("painel.conta", x.id); renderPainel(); } },
-      h("b", null, "@" + (x.username || "conta")), h("span", null, ehNum(x.seguidores) ? numero(x.seguidores) + " seguidores" : "sem números ainda"))));
+    $("#pn-atualizar").textContent = at.length > 1 ? `Atualizar ${at.length} contas` : "Atualizar agora";
+    renderChipsContas($("#pn-contas"), at, c, renderTudo);
     const vazio = (alvo, titulo, texto) => poe($(alvo), h("div", { class: "empty" }, h("strong", null, titulo), texto));
-    const limpar = () => { for (const s of ["#pn-fonte", "#pn-analise", "#pn-formatos", "#pn-tops", "#pn-tendencias", "#pn-geral"]) poe($(s)); $("#pn-analisar").hidden = true; $("#pn-buscar").hidden = true; };
-    renderConfigContas();
-    if (!S.loaded.contas) { limpar(); vazio("#pn-kpis", "Carregando o Painel…", "Buscando as contas e os números da equipe."); return; }
-    if (!at.length) { limpar(); vazio("#pn-kpis", "Nenhuma conta no Painel", S.contas.length ? "Todas as contas estão escondidas. Abra “Contas e nichos” lá embaixo e marque as que devem aparecer." : "Peça pro Claude: “adiciona as contas do Instagram no Painel da Central”."); return; }
-    renderFonte(c); renderKpis(c); renderAnalise(c); renderPorFormato(c); renderTops(c); renderTendencias(c); renderGeral(at, c);
+    const limpar = () => { for (const s of ["#pn-fonte", "#pn-analise", "#pn-formatos", "#pn-tops", "#pn-geral"]) poe($(s)); $("#pn-analisar").hidden = true; };
+    if (!S.loaded.contas) { limpar(); vazio("#pn-kpis", "Carregando o Desempenho…", "Buscando as contas e os números da equipe."); return; }
+    if (!at.length) { limpar(); vazio("#pn-kpis", clienteEmFoco() ? "Este cliente não tem conta do Instagram" : "Nenhuma conta do Instagram",
+      S.contas.length ? "Ligue uma conta a este cliente em Configurações → Contas do Instagram." : "Peça pro Claude: “adiciona as contas do Instagram na Central”."); return; }
+    renderFonte(c); renderKpis(c); renderAnalise(c); renderPorFormato(c); renderTops(c); renderGeral(at, c);
   }
   const quemAtualizou = (c) => (c.porClaude ? h("span", null, "pelo Claude") : c.atualizadoPor ? pessoa(c.atualizadoPor, false) : null);
   function renderFonte(c) {
@@ -2261,7 +2431,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     poe(el, ...posts.map((p, i) => {
       const tipo = TIPOS_IG[p.tipo];
       const texto = String(p.legenda || "").split("\n").find((l) => l.trim()) || "Post sem legenda";
-      return h("li", { class: "top" }, h("span", { class: "pos" }, i + 1), icone(tipo ? tipo.ic : "nenhum"),
+      return h("li", { class: "toppost" }, h("span", { class: "pos" }, i + 1), icone(tipo ? tipo.ic : "nenhum"),
         h("p", null, texto),
         h("div", { class: "nums" }, n("views", "visualizações", numero(p.views)), n("alcance", "alcance", numero(p.alcance)), n("engaj", "engaj.", pct(p.engaj)),
           n("salvos", "salvos", numero(p.salvos)), n("compart", "compart.", numero(p.compart)), n("comentarios", "coment.", numero(p.comentarios))),
@@ -2301,11 +2471,11 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       const refs = [];
       for (const [rot, link] of [["Exemplo", exemplo], ["Fonte", fonte]]) {
         if (!link) continue;
-        const r = await S.db.collection("referencias").add({ titulo: `${rot}: ${titulo}`.slice(0, 140), criador: "", link, arquivo: null, tipoArquivo: null, estiloId: null,
+        const r = await S.db.collection("referencias").add({ titulo: `${rot}: ${titulo}`.slice(0, 140), criador: "", link, arquivo: null, tipoArquivo: null, estiloId: null, clienteId: c.clienteId || null,
           tags: ["tendência"], notas: t.porque ? String(t.porque).slice(0, 500) : "", adicionadoPor: S.myId, porClaude: false, criadoEm: agora() });
         refs.push(r.id);
       }
-      await criarPost({ titulo, ideia, tags: ["tendência"], referencias: refs });
+      await criarPost({ titulo, ideia, tags: ["tendência"], referencias: refs, clienteId: c.clienteId || null, contaId: c.id });
     });
     if (ok) { S.pn.viraram.add(chave); renderPainel(); toast(exemplo || fonte ? "Ideia guardada no Calendário, com os links nas referências" : "Ideia guardada na caixa do Calendário"); }
   }
@@ -2325,15 +2495,18 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   function renderConfigContas() {
     const box = $("#pn-config-lista");
     const todas = [...S.contas].sort((a, b) => (ehNum(a.ordem) ? a.ordem : 99) - (ehNum(b.ordem) ? b.ordem : 99));
-    const assin = JSON.stringify([todas.map((x) => [x.id, x.username, x.ativa, x.nicho]), S.canWrite]);
+    const assin = JSON.stringify([todas.map((x) => [x.id, x.username, x.ativa, x.nicho, x.clienteId]), S.canWrite, S.clientes.map((c) => [c.id, c.nome, c.ativo])]);
     if (box.dataset.assin === assin) return; // não atrapalha quem está digitando
     box.dataset.assin = assin;
     if (!todas.length) { poe(box, h("p", { class: "hint" }, "Nenhuma conta cadastrada ainda.")); return; }
     poe(box, ...todas.map((x) => h("div", { class: "cfg-conta" },
       h("label", null, h("input", { type: "checkbox", id: "cfg-ativa-" + x.id, checked: x.ativa !== false, disabled: !S.canWrite,
         onchange: (ev) => salvarConta(x.id, { ativa: ev.target.checked }) }), h("span", null, h("b", null, "@" + (x.username || "conta")), x.nome ? h("span", { class: "hint", style: "display:block" }, x.nome) : null)),
-      h("input", { type: "text", id: "cfg-nicho-" + x.id, maxlength: "160", value: x.nicho || "", placeholder: "Nicho, ex.: passeios e rolês em São Paulo", "aria-label": "Nicho de @" + (x.username || "conta"), disabled: !S.canWrite,
-        onchange: (ev) => salvarConta(x.id, { nicho: ev.target.value.trim() }) }))));
+      h("div", { class: "row", style: "gap:8px" },
+        (() => { const sel = h("select", { id: "cfg-cliente-" + x.id, "aria-label": "Cliente de @" + (x.username || "conta"), disabled: !S.canWrite, style: "flex:1 1 160px",
+          onchange: (ev) => salvarConta(x.id, { clienteId: ev.target.value || null }) }); opcoesClientes(sel, x.clienteId || "", "Sem cliente"); return sel; })(),
+        h("input", { type: "text", id: "cfg-nicho-" + x.id, maxlength: "160", value: x.nicho || "", placeholder: "Nicho da conta (se for diferente do cliente)", "aria-label": "Nicho de @" + (x.username || "conta"), disabled: !S.canWrite,
+          style: "flex:2 1 200px", onchange: (ev) => salvarConta(x.id, { nicho: ev.target.value.trim() }) })))));
   }
   function salvarConta(id, campos) {
     if (!S.db) return toast("Abra a Central no claude.ai para salvar.");
@@ -2404,7 +2577,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   }
   $("#pn-atualizar").addEventListener("click", async () => {
     if (S.pn.atualizando || !S.pn.mcp || !S.db) return;
-    const lista = contasAtivas(); if (!lista.length) return;
+    const lista = contasEscopo(); if (!lista.length) return;
     S.pn.atualizando = true; const btn = $("#pn-atualizar"); btn.disabled = true;
     let certas = 0; let parou = null; const falhas = [];
     try {
@@ -2428,12 +2601,203 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     }
   });
 
+  // ---------- INÍCIO: o que precisa de atenção hoje ----------
+  function miniPost(p, quandoTxt, atraso, extra) {
+    const st = statusPost(p.status);
+    return h("div", { class: "mini", role: "button", tabindex: "0", "data-id": p.id, style: `--c: var(--ps-${st.id})`, "aria-label": rotuloPost(p) },
+      icone(p.formato || "nenhum"), h("b", null, p.titulo || "Sem título"),
+      quandoTxt ? h("span", { class: "quando" + (atraso ? " atraso" : "") }, quandoTxt) : h("span"),
+      h("small", null, !S.cli && p.clienteId ? marcaCliente(p.clienteId) : null, pillPost(p.status), extra || null, vchipDe(p), p.responsavel ? pessoa(p.responsavel, false) : null));
+  }
+  function listaMini(alvo, itens, vazioTxt, max = 6) {
+    const el = $(alvo);
+    if (!S.loaded.posts) { poe(el, h("p", { class: "hint" }, "Carregando…")); return; }
+    if (!itens.length) { poe(el, h("p", { class: "hint" }, vazioTxt)); return; }
+    poe(el, ...itens.slice(0, max), itens.length > max ? h("p", { class: "hint" }, `e mais ${itens.length - max}`) : null);
+    resolverPessoas(el);
+  }
+  function renderInicio() {
+    const hoje = isoDia(new Date()); const amanha = isoDia(somaDias(new Date(), 1)); const cid = clienteEmFoco();
+    const posts = S.posts.filter((p) => noEscopo(p.clienteId) && statusPost(p.status).id !== "arquivado");
+    $("#in-titulo").textContent = S.cli === "_" ? "Início · sem cliente" : cid ? nomeCliente(cid) : "Início";
+    $("#in-sub").textContent = cid ? "O que precisa de atenção neste cliente hoje e como foi a semana." : "O que precisa de atenção hoje, em todos os clientes, e como foi a semana.";
+    $("#in-novo").hidden = !(S.canWrite && S.db);
+    const atrasados = [];
+    for (const p of posts) {
+      const st = statusPost(p.status).id;
+      if (deIso(p.data) && p.data < hoje && st !== "publicado") atrasados.push([p, "era " + dataCurta(p.data), p.data]);
+      else if (deIso(p.prazo) && p.prazo < hoje && ETAPAS_ANTES.includes(st) && st !== "ideia") atrasados.push([p, "prazo " + dataCurta(p.prazo), p.prazo]);
+    }
+    atrasados.sort((a, b) => a[2].localeCompare(b[2]));
+    listaMini("#in-atrasados", atrasados.map(([p, t]) => miniPost(p, t, true)), "Nada atrasado.");
+    const proximos = posts.filter((p) => (p.data === hoje || p.data === amanha) && statusPost(p.status).id !== "publicado")
+      .sort((a, b) => (a.data + (a.hora || "99")).localeCompare(b.data + (b.hora || "99")));
+    listaMini("#in-hoje", proximos.map((p) => miniPost(p, (p.data === hoje ? "hoje" : "amanhã") + (p.hora ? " " + p.hora : ""), false)), "Nada marcado para hoje nem amanhã.");
+    const aprovar = [];
+    for (const p of posts) {
+      const pr = p.projetoId ? S.projetos.find((x) => x.id === p.projetoId) : null;
+      if (pr && pr.status === "storyboard" && (pr.storyboard || []).length) aprovar.push(miniPost(p, null, false, h("span", { class: "chip" }, "storyboard para aprovar")));
+      else if (pr && pr.status === "revisao") aprovar.push(miniPost(p, null, false, h("span", { class: "chip" }, "vídeo para aprovar")));
+      else if (statusPost(p.status).id === "revisao") aprovar.push(miniPost(p, null, false));
+    }
+    listaMini("#in-aprovacao", aprovar, "Nada esperando aprovação.");
+    const semana = Date.now() - 7 * 864e5;
+    const ideias = posts.filter((p) => statusPost(p.status).id === "ideia" && p.criadoEm && new Date(p.criadoEm).getTime() > semana).sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
+    listaMini("#in-ideias", ideias.map((p) => miniPost(p, quando(p.criadoEm), false)), "Nenhuma ideia nova nesta semana.", 4);
+    renderSemanaNumeros();
+  }
+  function renderSemanaNumeros() {
+    const contas = contasEscopo(); const com = contas.filter((c) => c.semana); const el = $("#in-kpis");
+    const vazio = (titulo, texto) => { poe(el, h("div", { class: "empty", style: "grid-column:1/-1" }, h("strong", null, titulo), texto)); poe($("#in-fonte")); poe($("#in-quedas")); };
+    if (!S.loaded.contas) return vazio("Carregando…", "Buscando os números das contas.");
+    if (!com.length) return vazio(contas.length ? "Sem números ainda" : "Nenhuma conta do Instagram aqui",
+      contas.length ? "Toque em “Atualizar agora” no Desempenho." : "Ligue as contas aos clientes em Configurações.");
+    const soma = (f) => { const v = com.map(f).filter(ehNum); return v.length ? v.reduce((a, b) => a + b, 0) : null; };
+    const sem = (k) => soma((c) => (c.semana || {})[k]); const ant = (k) => soma((c) => (c.anterior || {})[k]);
+    const recente = com.map((c) => c.atualizadoEm).filter(Boolean).sort().pop();
+    poe($("#in-fonte"), `Instagram · ${com.length === 1 ? "@" + com[0].username : com.length + " contas somadas"} · últimos 7 dias comparados com os 7 anteriores` + (recente ? " · atualizado " + quando(recente) : ""));
+    const base = (d) => (d ? [d, " vs 7 dias antes"] : []);
+    const tiles = [
+      { rot: "Seguidores", val: numero(soma((c) => c.seguidores)), sub: ehNum(sem("follower_growth")) ? ["+" + nf.format(sem("follower_growth")) + " novos em 7 dias"] : [] },
+      { rot: "Visualizações", val: numero(sem("views")), sub: base(deltaEl(variacao(sem("views"), ant("views")))) },
+      { rot: com.length > 1 ? "Alcance (soma das contas)" : "Alcance", val: numero(sem("reach")), sub: [] },
+      { rot: "Interações", val: numero(sem("total_interactions")), sub: base(deltaEl(variacao(sem("total_interactions"), ant("total_interactions")))) },
+    ];
+    poe(el, ...tiles.map((t) => h("div", { class: "kpi" }, h("span", null, t.rot), h("b", null, t.val), t.sub.length ? h("small", null, t.sub) : null)));
+    const quedas = com.map((c) => ({ c, v: variacao((c.semana || {}).views, (c.anterior || {}).views) })).filter((x) => ehNum(x.v) && x.v <= -25).sort((a, b) => a.v - b.v);
+    poe($("#in-quedas"), ...quedas.map(({ c, v }) => h("div", { class: "queda" }, icone("alerta"), h("b", null, "@" + c.username),
+      !S.cli && c.clienteId ? marcaCliente(c.clienteId) : null, h("span", null, "visualizações"), deltaEl(v), h("span", { class: "hint" }, "vs 7 dias antes"),
+      h("a", { class: "link-acao", href: "#desempenho", onclick: () => { S.pn.sel = c.id; gravarLocal("painel.conta", c.id); } }, "Ver no Desempenho"))));
+  }
+  $("#in-novo").addEventListener("click", () => novaFicha(null));
+
+  // ---------- IDEIAS: caixa, triagem e assuntos em alta ----------
+  function cartaoIdeia(p) {
+    const card = cartaoPost(p, false);
+    if (S.canWrite && S.db) {
+      const arquivada = statusPost(p.status).id === "arquivado";
+      card.append(h("div", { class: "triagem" }, arquivada ? h("button", { class: "btn", type: "button", "data-acao": "voltar" }, "Voltar para ideias")
+        : [h("button", { class: "btn", type: "button", "data-acao": "producao" }, "Para produção"), h("button", { class: "btn ghost", type: "button", "data-acao": "arquivar" }, "Arquivar")]));
+    }
+    return card;
+  }
+  function renderIdeias() {
+    const el = $("#ideias");
+    const doCliente = S.posts.filter((p) => noEscopo(p.clienteId));
+    const ideias = doCliente.filter((p) => statusPost(p.status).id === "ideia").sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
+    const arquivadas = doCliente.filter((p) => statusPost(p.status).id === "arquivado").sort((a, b) => (b.atualizadoEm || "").localeCompare(a.atualizadoEm || ""));
+    $("#ideias-n").textContent = S.loaded.posts ? String(ideias.length) : "";
+    $("#form-ideia").hidden = !S.canWrite;
+    const selCli = $("#ideia-cliente"); selCli.hidden = !!S.cli; if (!S.cli) opcoesClientes(selCli, selCli.value || "", "Sem cliente");
+    if (!S.loaded.posts) poe(el, h("div", { class: "empty" }, h("strong", null, "Carregando ideias…"), "Buscando a caixa da equipe."));
+    else if (!ideias.length) poe(el, doCliente.length ? h("p", { class: "hint" }, "Caixa vazia. Guarde a próxima ideia no campo acima.") : vazioCalendario());
+    else { poe(el, ...ideias.map(cartaoIdeia)); resolverPessoas(el); }
+    $("#id-arquivo").hidden = !arquivadas.length; $("#id-arquivo-n").textContent = arquivadas.length ? `(${arquivadas.length})` : "";
+    poe($("#id-arquivadas"), ...arquivadas.slice(0, 40).map(cartaoIdeia));
+    const at = contasEscopo(); const c = contaSel();
+    renderChipsContas($("#id-contas"), at, c, renderTudo);
+    if (c) renderTendencias(c);
+    else { $("#pn-buscar").hidden = true; poe($("#pn-tendencias"), h("p", { class: "hint" }, S.loaded.contas ? "Este cliente ainda não tem conta do Instagram ligada. Ligue em Configurações → Contas do Instagram." : "Carregando…")); }
+  }
+  async function triagem(id, acao) {
+    if (acao === "producao") { if (await salvarPost(id, { status: "roteiro" })) { toast("Foi para a produção. Escolha a data na ficha."); abrirFicha(id); } }
+    else if (acao === "arquivar") { if (await salvarPost(id, { status: "arquivado" })) toast("Ideia arquivada"); }
+    else if (acao === "voltar") { if (await salvarPost(id, { status: "ideia" })) toast("Voltou para a caixa de ideias"); }
+  }
+
+  // ---------- PRODUÇÃO: uma coluna por etapa ----------
+  const ETAPAS_PRODUCAO = ["roteiro", "producao", "revisao", "aprovado", "agendado", "publicado"];
+  function renderProducao() {
+    const el = $("#pr-lista"); $("#pr-novo").hidden = !(S.canWrite && S.db);
+    if (!S.loaded.posts) { poe(el, h("div", { class: "empty", style: "grid-column:1/-1" }, h("strong", null, "Carregando…"), "Buscando a produção da equipe.")); return; }
+    const posts = S.posts.filter((p) => noEscopo(p.clienteId));
+    const desde = isoDia(somaDias(new Date(), -14));
+    const chave = (p) => (deIso(p.data) ? p.data + (p.hora || "") : "9999");
+    const ordem = (a, b) => chave(a).localeCompare(chave(b)) || (a.titulo || "").localeCompare(b.titulo || "", "pt-BR");
+    const grupos = ETAPAS_PRODUCAO.map((id) => {
+      let l = posts.filter((p) => statusPost(p.status).id === id);
+      l = id === "publicado" ? l.filter((p) => !deIso(p.data) || p.data >= desde).sort((a, b) => ordem(b, a)) : l.sort(ordem);
+      return { st: statusPost(id), l };
+    });
+    if (!grupos.some((g) => g.l.length)) { poe(el, h("div", { class: "empty", style: "grid-column:1/-1" }, h("strong", null, "Nada em produção"), "Mande uma ideia para a produção em Ideias, ou toque em “Novo conteúdo”.")); return; }
+    poe(el, ...grupos.map(({ st, l }) => h("section", { class: "etapa", style: `--c: var(--ps-${st.id})`, "aria-label": `${st.nome}: ${l.length}` },
+      h("div", { class: "etapa-cab" }, h("b", null, st.nome), h("span", null, l.length)),
+      l.length ? l.map((p) => cartaoPost(p, true, true)) : h("p", { class: "hint" }, st.id === "publicado" ? "Nada publicado nos últimos 14 dias." : "Nada nesta etapa."))));
+    resolverPessoas(el);
+  }
+  $("#pr-novo").addEventListener("click", () => novaFicha(null));
+
+  // Tocar num cartão abre a ficha (Início, Ideias, Produção)
+  for (const aba of ["#tab-inicio", "#tab-ideias", "#tab-producao"]) {
+    $(aba).addEventListener("click", (ev) => {
+      const b = ev.target.closest("[data-acao]");
+      if (b) { const card = b.closest("[data-id]"); if (card) triagem(card.dataset.id, b.dataset.acao); return; }
+      if (ev.target.closest("a, button, select, input")) return;
+      const c = ev.target.closest("[data-id]"); if (c) abrirFicha(c.dataset.id);
+    });
+    $(aba).addEventListener("keydown", (ev) => {
+      if (ev.key !== "Enter" && ev.key !== " ") return;
+      const c = ev.target.closest && ev.target.closest('[data-id][role="button"]');
+      if (!c || ev.target !== c) return;
+      ev.preventDefault(); abrirFicha(c.dataset.id);
+    });
+  }
+
+  // ---------- CONFIGURAÇÕES: clientes, contas e equipe ----------
+  function salvarCliente(id, campos) {
+    if (!S.db) return toast("Abra a Central no claude.ai para salvar.");
+    emFila("clientes/" + id, () => S.db.doc("clientes/" + id).update(campos)).then(() => toast("Cliente atualizado"), (e) => { console.error(e); toast(erroMsg(e)); });
+  }
+  function renderConfig() {
+    renderConfigContas();
+    const box = $("#cfg-clientes"); $("#cfg-novo-cliente").hidden = !(S.canWrite && S.db);
+    const todos = [...S.clientes].sort(ordemPor);
+    const assin = JSON.stringify([todos.map((c) => [c.id, c.nome, c.cor, c.nicho, c.ativo]), S.contas.map((c) => [c.id, c.clienteId, c.username]), S.canWrite, S.loaded.clientes]);
+    if (box.dataset.assin !== assin) {
+      box.dataset.assin = assin;
+      if (!S.loaded.clientes) poe(box, h("p", { class: "hint" }, "Carregando…"));
+      else if (!todos.length) poe(box, h("p", { class: "hint" }, "Nenhum cliente ainda. Crie o primeiro com “Novo cliente”."));
+      else poe(box, ...todos.map((c) => {
+        const contas = S.contas.filter((x) => x.clienteId === c.id);
+        return h("div", { class: "cfg-cliente" },
+          h("input", { type: "color", id: "cfg-cor-" + c.id, value: corCliente(c.id) || CORES_CLIENTE[0], "aria-label": "Cor de " + (c.nome || "cliente"), disabled: !S.canWrite, onchange: (ev) => salvarCliente(c.id, { cor: ev.target.value }) }),
+          h("input", { type: "text", id: "cfg-nome-" + c.id, value: c.nome || "", maxlength: "80", "aria-label": "Nome do cliente", disabled: !S.canWrite,
+            onchange: (ev) => { const v = ev.target.value.trim(); if (v) salvarCliente(c.id, { nome: v }); else ev.target.value = c.nome || ""; } }),
+          h("input", { type: "text", id: "cfg-nicho-cl-" + c.id, value: c.nicho || "", maxlength: "160", placeholder: "Nicho, ex.: rolês e passeios em São Paulo", "aria-label": "Nicho de " + (c.nome || "cliente"), disabled: !S.canWrite,
+            onchange: (ev) => salvarCliente(c.id, { nicho: ev.target.value.trim() }) }),
+          h("label", null, h("input", { type: "checkbox", id: "cfg-ativo-" + c.id, checked: c.ativo !== false, disabled: !S.canWrite, onchange: (ev) => salvarCliente(c.id, { ativo: ev.target.checked }) }), "Ativo"),
+          h("p", { class: "hint" }, contas.length ? contas.map((x) => "@" + x.username).join(" · ") : "Sem conta do Instagram ligada"));
+      }));
+    }
+    renderEquipe();
+  }
+  $("#cfg-novo-cliente").addEventListener("click", async (ev) => {
+    if (!S.db) return;
+    const n = S.clientes.length; let id = null;
+    const ok = await salvando(ev.currentTarget, async () => {
+      const ref = await S.db.collection("clientes").add({ nome: "Novo cliente", cor: CORES_CLIENTE[n % CORES_CLIENTE.length], nicho: "", estiloId: null, ativo: true, ordem: n });
+      id = ref.id;
+    });
+    if (ok) { toast("Cliente criado. Dê um nome a ele."); setTimeout(() => { const el = document.getElementById("cfg-nome-" + id); if (el) { el.focus(); el.select(); } }, 400); }
+  });
+  function renderEquipe() {
+    const box = $("#cfg-equipe"); const ids = idsTime();
+    const andamento = (id) => S.posts.filter((p) => p.responsavel === id && ["roteiro", "producao", "revisao"].includes(statusPost(p.status).id)).length;
+    const assin = JSON.stringify(ids.map((id) => [id, andamento(id)]));
+    if (box.dataset.assin === assin) return; box.dataset.assin = assin;
+    if (!ids.length) { poe(box, h("p", { class: "hint" }, "Ninguém ainda.")); return; }
+    poe(box, h("div", { class: "equipe" }, ids.map((id) => h("div", { class: "linha" }, pessoa(id, false),
+      h("span", { class: "hint" }, andamento(id) === 1 ? "1 conteúdo em andamento" : `${andamento(id)} conteúdos em andamento`)))));
+    resolverPessoas(box);
+  }
+
   // ---------- inicialização ----------
   function renderTudo() {
-    selectEstilos($("#np-estilo"), $("#np-estilo").value, false);
-    selectEstilos($("#r-estilo"), $("#r-estilo").value, true);
-    renderProjetos(); renderListaEstilos(); renderRefs(); renderCalendario(); renderPainel();
-    if (!S.rascunho && S.estilos.length && S.loaded.estilos) selecionarEstilo((estiloPadrao() || S.estilos[0]).id);
+    renderSeletorCliente();
+    const rc = $("#r-cliente"); opcoesClientes(rc, rc.value || clienteEmFoco() || "", "Todos os clientes");
+    selectEstilos($("#r-estilo"), $("#r-estilo").value, true, clienteEmFoco());
+    renderInicio(); renderCalendario(); renderIdeias(); renderProducao(); renderPainel(); renderListaEstilos(); renderRefs(); renderConfig();
+    if (!S.rascunho && S.loaded.estilos) { const vis = estilosNoEscopo(); if (vis.length) selecionarEstilo((vis.find((e) => e.padrao && e.clienteId === clienteEmFoco()) || vis.find((e) => e.padrao) || vis[0]).id); }
   }
   function assinar(nome, chave) {
     S.db.collection(nome).onSnapshot((snap) => {
@@ -2447,7 +2811,8 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
 
   async function init() {
     $("#cal-filtros").open = !mqCel.matches;
-    S.pn.sel = lerLocal("painel.conta");
+    S.pn.sel = lerLocal("painel.conta"); S.cli = lerLocal("central.cliente") || "";
+    document.querySelectorAll("[data-ic]").forEach((el) => el.prepend(icone(el.dataset.ic)));
     mostrarAba(); renderPrevia(); iniciarPrevia(); renderTudo();
     const C = window.claude;
     if (!C || !C.use) { banner("Abra esta página no claude.ai para ver e salvar os dados da equipe."); for (const k in S.loaded) S.loaded[k] = true; renderTudo(); return; }
@@ -2458,15 +2823,15 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       const pode = await user.can("data.write"); S.canWrite = pode !== false;
       const box = $("#me"); box.replaceChildren(h("img", { class: "av", src: me.avatarUrl, alt: "" }), h("span", null, me.name || "Você")); box.hidden = false;
     }
-    if (!S.canWrite) { $("#novo-projeto").hidden = true; $("#form-ref").hidden = true; banner("Você está vendo a Central sem permissão para editar. Peça para alguém do time te dar acesso de Editor."); }
+    if (!S.canWrite) { $("#form-ref").hidden = true; banner("Você está vendo a Central sem permissão para editar. Peça para alguém do time te dar acesso de Editor."); }
     if (!S.assets) $("#r-arquivo-campo").querySelector("span").textContent = "Vídeo ou imagem (só para Editores da Central)";
     if (!db) { banner("Entre na sua conta do claude.ai para ver os dados da equipe."); for (const k in S.loaded) S.loaded[k] = true; renderTudo(); return; }
     timer = setTimeout(() => banner("Ainda não consegui carregar os dados da equipe. Verifique a conexão; a página continua tentando."), 10000);
     assinar("estilos", "estilos"); assinar("referencias", "refs"); assinar("projetos", "projetos"); assinar("posts", "posts");
-    assinar("contas", "contas"); assinar("analises", "analises"); assinar("config", "config");
+    assinar("contas", "contas"); assinar("analises", "analises"); assinar("config", "config"); assinar("clientes", "clientes");
     if (user) { try { S.isOwner = !!(await user.isOwner()); } catch { S.isOwner = false; } }
     // Claude pela página (análise): pede licença no primeiro uso
-    C.use("sample").then((sample) => { S.pn.sample = sample; renderPainel(); }, () => {});
+    C.use("sample").then((sample) => { S.pn.sample = sample; renderTudo(); }, () => {});
     // Conectores pela página: Pipeboard (números) e Claude Code Remote (busca de assuntos em alta).
     // Cada botão só aparece para quem tem o conector; os outros veem o que ficou salvo.
     C.use("mcp").then(async (mcp) => {
@@ -2478,7 +2843,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
         S.pn.podeAtualizar = !!ig && (ig.tools || []).length > 0;
         S.pn.podeBuscar = !!ccr && (ccr.tools || []).some((t) => t.name === "fire_trigger");
       } catch (e) { console.warn("mcp", e); S.pn.podeAtualizar = false; S.pn.podeBuscar = false; }
-      renderPainel();
+      renderTudo();
     }, () => {});
   }
   init();
