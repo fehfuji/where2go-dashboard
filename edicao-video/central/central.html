@@ -33,6 +33,9 @@
   --ps-pronto: var(--st-pronto);
   --ps-agendado: var(--st-revisao);
   --ps-publicado: var(--accent);
+  /* Variação no Painel: subiu / caiu (sempre com seta e texto, nunca só a cor) */
+  --bom: var(--st-pronto);
+  --ruim: var(--danger);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -297,6 +300,75 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .sdia-add { justify-self: start; display: inline-flex; align-items: center; gap: 4px; border: 0; background: transparent; color: var(--muted); font-size: 13px; padding: 4px 0; cursor: pointer; min-height: 32px; }
 .sdia-add .ic { width: 16px; height: 16px; }
 
+/* Painel — contas no topo, números da semana, análise, formatos, posts que mais renderam e tendências */
+.painel-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.contas-sel { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px; margin: 0 -2px 10px; }
+.contas-sel::-webkit-scrollbar { display: none; }
+.conta-btn { flex: none; display: grid; justify-items: start; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 10px; padding: 7px 12px; cursor: pointer; text-align: left; }
+.conta-btn b { font-weight: 600; font-size: 14px; }
+.conta-btn span { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.conta-btn[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.fonte { margin: 0 0 14px; font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.fonte .erro { color: var(--danger); }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 10px; margin-bottom: 14px; }
+@media (max-width: 520px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 3px; align-content: start; min-width: 0; }
+.kpi > span { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+.kpi > b { font-family: var(--font-display); font-size: 26px; line-height: 1.15; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.kpi > small { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; align-items: center; gap: 2px 5px; }
+.delta { display: inline-flex; align-items: center; gap: 2px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--muted); }
+.delta[data-dir="sobe"] { color: var(--bom); }
+.delta[data-dir="desce"] { color: var(--ruim); }
+.delta .ic { width: 13px; height: 13px; }
+.spark { width: 100%; height: 30px; display: block; margin-top: 4px; overflow: visible; }
+.painel-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-bottom: 14px; align-items: start; }
+.painel-grid.largo { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); }
+@media (max-width: 900px) { .painel-grid, .painel-grid.largo { grid-template-columns: minmax(0, 1fr); } }
+.painel-grid > .panel { min-width: 0; }
+.panel h3 { font-size: 16px; }
+.cab-sec { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.cab-sec select { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 6px 10px; font-size: 13.5px; }
+.ins { --c: var(--muted); display: grid; gap: 6px; }
+.ins-titulo { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 14px; }
+.ins-titulo .ic { width: 16px; height: 16px; color: var(--c); }
+.ins ul { margin: 0; padding-left: 22px; display: grid; gap: 5px; font-size: 14px; }
+.ins li { overflow-wrap: anywhere; }
+.ins li::marker { color: var(--c); }
+table.fmt { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.fmt th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; padding: 0 8px 6px 0; }
+.fmt td { padding: 8px 8px 8px 0; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; vertical-align: middle; }
+.fmt .nr { text-align: right; white-space: nowrap; }
+.fmt .nome { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.fmt .nome .ic { width: 15px; height: 15px; color: var(--muted); }
+.fmt .bar-cel { width: 42%; min-width: 90px; }
+.bar-linha { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.bar { height: 8px; border-radius: 0 4px 4px 0; background: var(--accent); min-width: 2px; }
+.tops { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.top { display: grid; grid-template-columns: 22px auto minmax(0, 1fr); gap: 4px 10px; padding: 10px 12px; background: var(--bg); border-radius: 8px; align-items: start; }
+.top .pos { font-family: var(--font-mono); font-size: 12px; color: var(--muted); padding-top: 2px; font-variant-numeric: tabular-nums; }
+.top > .ic { color: var(--muted); margin-top: 1px; width: 17px; height: 17px; }
+.top p { margin: 0; font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.top .nums, .top .rod { grid-column: 3; display: flex; flex-wrap: wrap; gap: 3px 12px; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.top .nums b { color: var(--ink); font-weight: 600; }
+.top .nums .em b { color: var(--accent); }
+.top a { color: var(--accent); }
+.tend { display: grid; gap: 4px; padding: 10px 12px; border-radius: 8px; background: var(--bg); min-width: 0; }
+.tend b { font-size: 14.5px; overflow-wrap: anywhere; }
+.tend p { margin: 0; font-size: 13.5px; color: var(--muted); overflow-wrap: anywhere; }
+.tend .row { gap: 6px 12px; align-items: center; }
+.tend a { color: var(--accent); font-size: 13px; }
+.tabela-wrap { overflow-x: auto; }
+table.geral { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 560px; }
+.geral th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; padding: 0 12px 6px 0; white-space: nowrap; }
+.geral td { padding: 8px 12px 8px 0; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.geral .nr { text-align: right; }
+.geral tr[aria-current="true"] td { background: var(--accent-soft); }
+.geral .link-acao { color: var(--ink); font-weight: 600; font-size: 13.5px; text-decoration: none; }
+.cfg-conta { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); gap: 6px 14px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.cfg-conta label { display: flex; gap: 8px; align-items: center; font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
+.cfg-conta input[type="text"] { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 7px 10px; }
+@media (max-width: 520px) { .cfg-conta { grid-template-columns: minmax(0, 1fr); } }
+
 /* Ficha do post — gaveta à direita no computador, tela cheia no celular */
 html.trava { overflow: hidden; }
 dialog.ficha { margin: 0 0 0 auto; padding: 0; border: 0; width: min(580px, 100%); max-width: 100%; height: 100%; max-height: 100%; background: var(--surface); color: var(--ink); box-shadow: -12px 0 40px rgb(0 0 0 / 0.22); }
@@ -369,6 +441,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     <nav class="tabs" aria-label="Seções">
       <a href="#projetos" data-tab="projetos">Projetos</a>
       <a href="#calendario" data-tab="calendario">Calendário</a>
+      <a href="#painel" data-tab="painel">Painel</a>
       <a href="#estilos" data-tab="estilos">Estilos</a>
       <a href="#referencias" data-tab="referencias">Referências</a>
     </nav>
@@ -464,6 +537,42 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
         <div id="cal-grade" class="mes"></div>
       </div>
     </div>
+  </section>
+
+  <!-- PAINEL -->
+  <section id="tab-painel" data-section="painel" hidden>
+    <div class="section-head">
+      <div>
+        <h2>Painel</h2>
+        <p>Os números do Instagram de cada conta: a última semana comparada com a anterior, o que está funcionando, os posts que mais renderam e os assuntos em alta, que viram ideias no Calendário.</p>
+      </div>
+      <div class="painel-acoes">
+        <span class="hint" id="pn-progresso" role="status"></span>
+        <button class="btn primary" type="button" id="pn-atualizar" hidden>Atualizar agora</button>
+      </div>
+    </div>
+    <div class="contas-sel" id="pn-contas" role="group" aria-label="Conta do Instagram"></div>
+    <p class="fonte" id="pn-fonte"></p>
+    <div class="kpis" id="pn-kpis"></div>
+    <div class="painel-grid">
+      <section class="panel stack" aria-labelledby="pn-an-t"><h3 id="pn-an-t">O que funciona e o que não</h3><div class="stack" id="pn-analise"></div></section>
+      <section class="panel stack" aria-labelledby="pn-fm-t"><h3 id="pn-fm-t">Por formato <span class="hint">· últimos 30 dias</span></h3><div class="stack" style="gap:10px" id="pn-formatos"></div></section>
+    </div>
+    <div class="painel-grid largo">
+      <section class="panel stack" aria-labelledby="pn-tp-t">
+        <div class="cab-sec"><h3 id="pn-tp-t">Posts que mais renderam <span class="hint">· 30 dias</span></h3>
+          <select id="pn-ordem" aria-label="Ordenar posts por">
+            <option value="views">Mais visualizações</option><option value="engaj">Mais engajamento</option><option value="salvos">Mais salvamentos</option><option value="compart">Mais compartilhamentos</option>
+          </select></div>
+        <ol class="tops" id="pn-tops"></ol>
+      </section>
+      <section class="panel stack" aria-labelledby="pn-td-t"><h3 id="pn-td-t">Assuntos em alta no nicho</h3><div class="stack" style="gap:8px" id="pn-tendencias"></div></section>
+    </div>
+    <section class="panel stack" aria-labelledby="pn-gr-t" style="margin-bottom:14px"><h3 id="pn-gr-t">Todas as contas <span class="hint">· últimos 7 dias</span></h3><div class="tabela-wrap" id="pn-geral"></div></section>
+    <details class="panel" id="pn-config"><summary>Contas e nichos</summary>
+      <p class="hint" style="margin:10px 0 4px">Escolha as contas que aparecem no Painel e descreva o nicho de cada uma. O Claude usa o nicho para buscar os assuntos em alta.</p>
+      <div id="pn-config-lista"></div>
+    </details>
   </section>
 
   <!-- ESTILOS -->
@@ -661,8 +770,10 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
 
   const S = {
     db: null, assets: null, user: null, myId: null, canWrite: true,
-    estilos: [], refs: [], projetos: [], notas: [], posts: [],
-    loaded: { estilos: false, referencias: false, projetos: false, posts: false },
+    estilos: [], refs: [], projetos: [], notas: [], posts: [], contas: [], analises: [],
+    loaded: { estilos: false, referencias: false, projetos: false, posts: false, contas: false, analises: false },
+    // Painel: conta escolhida, ordem dos posts, histórico diário da conta escolhida, conector Pipeboard
+    pn: { sel: null, ordem: "views", hist: [], histDe: undefined, unsubHist: null, mcp: null, podeAtualizar: false, atualizando: false, viraram: new Set() },
     filtro: null, aberto: null, unsubNotas: null,
     estiloSel: null, rascunho: null, modo: "rosto",
     // Calendário: ref = dia de referência do mês (ou da semana, no celular) que está na tela
@@ -761,11 +872,14 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   }
 
   // ---------- abas ----------
-  const ABAS = ["projetos", "calendario", "estilos", "referencias"];
+  const ABAS = ["projetos", "calendario", "painel", "estilos", "referencias"];
   function mostrarAba() {
     const aba = ABAS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "projetos";
     for (const a of ABAS) $("#tab-" + a).hidden = a !== aba;
     document.querySelectorAll(".tabs a").forEach((a) => a.setAttribute("aria-current", a.dataset.tab === aba ? "page" : "false"));
+    // No celular as abas rolam de lado: mantém a aba aberta à vista.
+    const ativa = document.querySelector('.tabs a[aria-current="page"]'); const nav = document.querySelector(".tabs");
+    if (ativa && nav && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = ativa.offsetLeft - nav.offsetLeft - (nav.clientWidth - ativa.offsetWidth) / 2;
   }
   window.addEventListener("hashchange", mostrarAba);
 
@@ -1199,6 +1313,9 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     ref: '<path d="M7 4h10v16l-5-3.6L7 20z"/>',
     filme: '<rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M3.5 9.5h17M8 5.5v4M16 5.5v4"/>',
     link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+    sobe: '<path d="M12 19V5M6 11l6-6 6 6"/>',
+    desce: '<path d="M12 5v14M6 13l6 6 6-6"/>',
+    alerta: '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/>',
   };
   function icone(nome) {
     const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -1906,11 +2023,297 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     if (ok) { f.excluido = true; fecharFicha(); toast("Post excluído"); }
   });
 
+  // ---------- PAINEL ----------
+  const SERVIDOR_IG = "Pipeboard";
+  const METRICAS_IG = ["reach", "follower_count", "profile_views", "views", "total_interactions", "accounts_engaged", "likes", "comments", "shares", "saves"];
+  const CAMPOS_IG = ["follower_count", "follower_growth", "reach", "profile_views", "website_clicks", "engagement_rate", "views", "total_interactions", "accounts_engaged", "likes", "comments", "shares", "saves"];
+  const SOMAVEIS = ["views", "total_interactions", "profile_views", "follower_growth", "likes", "comments", "shares", "saves"]; // podem ser subtraídos (14 dias − 7 dias)
+  const TIPOS_IG = { VIDEO: { nome: "Reels", ic: "reels" }, CAROUSEL_ALBUM: { nome: "Carrossel", ic: "carrossel" }, IMAGE: { nome: "Foto", ic: "post" } };
+  const ORDENS = { views: "visualizações", engaj: "engajamento", salvos: "salvamentos", compart: "compartilhamentos" };
+  const nfc = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 });
+  const nf1 = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
+  const ehNum = (x) => typeof x === "number" && isFinite(x);
+  const numero = (n) => (!ehNum(n) ? "—" : Math.abs(n) >= 10000 ? nfc.format(n) : nf.format(Math.round(n)));
+  const pct = (n) => (!ehNum(n) ? "—" : nf1.format(n) + "%");
+  const media = (l) => { const v = l.filter(ehNum); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  // replaceChildren escreveria "null" na tela: tira os vazios antes
+  const poe = (el, ...kids) => el.replaceChildren(...kids.flat().filter((k) => k != null && k !== false));
+  const lerLocal = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+  const gravarLocal = (k, v) => { try { localStorage.setItem(k, v); } catch { /* sem armazenamento: tudo bem */ } };
+
+  function contasAtivas() {
+    return S.contas.filter((c) => c.ativa !== false).sort((a, b) => (ehNum(a.ordem) ? a.ordem : 99) - (ehNum(b.ordem) ? b.ordem : 99) || (a.username || "").localeCompare(b.username || ""));
+  }
+  function contaSel() { const at = contasAtivas(); return at.find((c) => c.id === S.pn.sel) || at[0] || null; }
+  const analiseDe = (id) => S.analises.find((a) => a.id === id) || null;
+
+  // Histórico diário da conta escolhida (para seguidores ao longo do tempo e comparar alcance/engajamento)
+  function assinarHistorico(id) {
+    if (S.pn.histDe === id) return;
+    if (S.pn.unsubHist) S.pn.unsubHist();
+    S.pn.histDe = id; S.pn.hist = []; S.pn.unsubHist = null;
+    if (!S.db || !id) return;
+    S.pn.unsubHist = S.db.collection(`contas/${id}/historico`).onSnapshot((snap) => {
+      if (S.pn.histDe !== id) return;
+      S.pn.hist = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((x) => deIso(x.id)).sort((a, b) => a.id.localeCompare(b.id));
+      renderPainel();
+    }, (e) => console.warn("historico", e));
+  }
+  function pontoHaDias(n) {
+    const alvo = isoDia(somaDias(new Date(), -n)); const limite = isoDia(somaDias(new Date(), -(n + 3)));
+    const c = S.pn.hist.filter((x) => x.id <= alvo && x.id >= limite);
+    return c.length ? c[c.length - 1] : null;
+  }
+  const variacao = (atual, antes) => (ehNum(atual) && ehNum(antes) && antes > 0 ? ((atual - antes) / antes) * 100 : null);
+  function deltaEl(v, unidade) {
+    if (!ehNum(v)) return null;
+    const dir = Math.abs(v) < 0.05 ? "igual" : v > 0 ? "sobe" : "desce";
+    return h("span", { class: "delta", "data-dir": dir }, dir === "igual" ? null : icone(dir),
+      (dir === "igual" ? "igual" : nf1.format(Math.abs(v)) + (unidade || "%")));
+  }
+  function sparkSeguidores() {
+    const pts = S.pn.hist.filter((x) => ehNum(x.seguidores)).slice(-30);
+    if (pts.length < 2) return null;
+    const vals = pts.map((x) => x.seguidores); const min = Math.min(...vals), max = Math.max(...vals); const amp = max - min || 1;
+    const W = 100, H = 28; const xy = vals.map((v, i) => [(i / (vals.length - 1)) * W, H - 2 - ((v - min) / amp) * (H - 4)]);
+    const ns = "http://www.w3.org/2000/svg"; const s = document.createElementNS(ns, "svg");
+    s.setAttribute("viewBox", `0 0 ${W} ${H}`); s.setAttribute("preserveAspectRatio", "none"); s.setAttribute("class", "spark"); s.setAttribute("role", "img");
+    s.setAttribute("aria-label", `Seguidores de ${dataCurta(pts[0].id)} a ${dataCurta(pts[pts.length - 1].id)}: de ${nf.format(vals[0])} para ${nf.format(vals[vals.length - 1])}`);
+    const area = document.createElementNS(ns, "path"); area.setAttribute("d", `M0 ${H} L${xy.map((p) => p.join(" ")).join(" L")} L${W} ${H} Z`); area.setAttribute("fill", "var(--accent-soft)");
+    const linha = document.createElementNS(ns, "polyline"); linha.setAttribute("points", xy.map((p) => p.join(",")).join(" ")); linha.setAttribute("fill", "none");
+    linha.setAttribute("stroke", "var(--accent)"); linha.setAttribute("stroke-width", "2"); linha.setAttribute("vector-effect", "non-scaling-stroke"); linha.setAttribute("stroke-linejoin", "round");
+    const tt = document.createElementNS(ns, "title"); tt.textContent = s.getAttribute("aria-label");
+    s.append(tt, area, linha); return s;
+  }
+
+  function renderPainel() {
+    const at = contasAtivas(); const c = contaSel();
+    if (c) S.pn.sel = c.id;
+    assinarHistorico(c ? c.id : null);
+    $("#pn-atualizar").hidden = !(S.pn.podeAtualizar && S.canWrite && S.db && at.length);
+    poe($("#pn-contas"), ...at.map((x) => h("button", { class: "conta-btn", type: "button", "aria-pressed": String(c && x.id === c.id),
+      onclick: () => { S.pn.sel = x.id; gravarLocal("painel.conta", x.id); renderPainel(); } },
+      h("b", null, "@" + (x.username || "conta")), h("span", null, ehNum(x.seguidores) ? numero(x.seguidores) + " seguidores" : "sem números ainda"))));
+    const vazio = (alvo, titulo, texto) => poe($(alvo), h("div", { class: "empty" }, h("strong", null, titulo), texto));
+    const limpar = () => { for (const s of ["#pn-fonte", "#pn-analise", "#pn-formatos", "#pn-tops", "#pn-tendencias", "#pn-geral"]) poe($(s)); };
+    renderConfigContas();
+    if (!S.loaded.contas) { limpar(); vazio("#pn-kpis", "Carregando o Painel…", "Buscando as contas e os números da equipe."); return; }
+    if (!at.length) { limpar(); vazio("#pn-kpis", "Nenhuma conta no Painel", S.contas.length ? "Todas as contas estão escondidas. Abra “Contas e nichos” lá embaixo e marque as que devem aparecer." : "Peça pro Claude: “adiciona as contas do Instagram no Painel da Central”."); return; }
+    renderFonte(c); renderKpis(c); renderAnalise(c); renderPorFormato(c); renderTops(c); renderTendencias(c); renderGeral(at, c);
+  }
+  const quemAtualizou = (c) => (c.porClaude ? h("span", null, "pela rotina do Claude") : c.atualizadoPor ? pessoa(c.atualizadoPor, false) : null);
+  function renderFonte(c) {
+    const el = $("#pn-fonte");
+    poe(el, "Instagram via Pipeboard · últimos 7 dias comparados com os 7 anteriores",
+      c.atualizadoEm ? h("span", null, "· atualizado " + quando(c.atualizadoEm)) : h("span", null, "· ainda não atualizado"), c.atualizadoEm ? quemAtualizou(c) : null,
+      c.erro ? h("span", { class: "erro" }, "· a última atualização falhou: " + String(c.erro).slice(0, 160)) : null);
+    resolverPessoas(el);
+  }
+  function renderKpis(c) {
+    const el = $("#pn-kpis"); const s = c.semana || null; const a = c.anterior || {};
+    if (!s) { poe(el, h("div", { class: "empty", style: "grid-column:1/-1" }, h("strong", null, "Ainda sem números de @" + (c.username || "conta")),
+      S.pn.podeAtualizar && S.canWrite ? "Toque em “Atualizar agora” para puxar do Instagram, ou espere a rotina diária do Claude." : "Os números chegam pela rotina diária do Claude, todo dia de manhã.")); return; }
+    const h7 = pontoHaDias(7);
+    const base = (d) => (d ? [d, " vs 7 dias antes"] : ["sem base de comparação ainda"]);
+    const tiles = [
+      { rot: "Seguidores", val: numero(ehNum(c.seguidores) ? c.seguidores : s.follower_count),
+        sub: ehNum(s.follower_growth) ? ["+" + nf.format(s.follower_growth) + " novos em 7 dias"] : [], spark: true },
+      { rot: "Visualizações", val: numero(s.views), sub: base(deltaEl(variacao(s.views, a.views))) },
+      { rot: "Alcance", val: numero(s.reach), sub: base(h7 ? deltaEl(variacao(s.reach, h7.alcance7)) : null) },
+      { rot: "Interações", val: numero(s.total_interactions), sub: base(deltaEl(variacao(s.total_interactions, a.total_interactions))) },
+      { rot: "Engajamento", val: pct(s.engagement_rate), sub: base(h7 && ehNum(h7.engaj7) && ehNum(s.engagement_rate) ? deltaEl(s.engagement_rate - h7.engaj7, " p.p.") : null) },
+      { rot: "Visitas ao perfil", val: numero(s.profile_views), sub: base(deltaEl(variacao(s.profile_views, a.profile_views))) },
+    ];
+    poe(el, ...tiles.map((t) => h("div", { class: "kpi" }, h("span", null, t.rot), h("b", null, t.val), t.sub.length ? h("small", null, t.sub) : null, t.spark ? sparkSeguidores() : null)));
+  }
+  function renderAnalise(c) {
+    const el = $("#pn-analise"); const an = analiseDe(c.id);
+    if (!an || (!(an.funciona || []).length && !(an.naoFunciona || []).length)) {
+      poe(el, h("p", { class: "hint" }, "A análise do Claude aparece aqui depois da rotina diária: o que está dando certo e o que não está, comparando formatos, temas, legendas e horários dos posts."));
+      return;
+    }
+    const lista = (titulo, itens, cor, ic) => (itens || []).length ? h("div", { class: "ins", style: `--c: ${cor}` }, h("span", { class: "ins-titulo" }, icone(ic), titulo), h("ul", null, itens.slice(0, 6).map((t) => h("li", null, String(t))))) : null;
+    poe(el, an.resumo ? h("p", { style: "margin:0" }, String(an.resumo)) : null,
+      lista("Está funcionando", an.funciona, "var(--bom)", "check"), lista("Não está funcionando", an.naoFunciona, "var(--ruim)", "alerta"),
+      h("p", { class: "hint" }, "Análise do Claude · " + quando(an.criadoEm)));
+  }
+  function renderPorFormato(c) {
+    const el = $("#pn-formatos"); const posts = c.posts || [];
+    if (!posts.length) { poe(el, h("p", { class: "hint" }, c.semana ? "Nenhum post nos últimos 30 dias." : "Os formatos aparecem depois da primeira atualização.")); return; }
+    const grupos = new Map();
+    for (const p of posts) { const k = TIPOS_IG[p.tipo] ? p.tipo : "OUTRO"; if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(p); }
+    const linhas = [...grupos.entries()].map(([k, l]) => ({ k, nome: TIPOS_IG[k] ? TIPOS_IG[k].nome : "Outro", ic: TIPOS_IG[k] ? TIPOS_IG[k].ic : "nenhum", n: l.length,
+      views: media(l.map((p) => p.views)), engaj: media(l.map((p) => p.engaj)), salvos: media(l.map((p) => p.salvos)) })).sort((a, b) => (b.views || 0) - (a.views || 0));
+    const max = Math.max(...linhas.map((l) => l.views || 0)) || 1;
+    const fortes = linhas.filter((l) => l.n >= 2 && ehNum(l.views));
+    const frase = fortes.length >= 2 && fortes[1].views > 0 && fortes[0].views / fortes[1].views >= 1.15
+      ? `${fortes[0].nome} tem em média ${nf1.format(fortes[0].views / fortes[1].views)}× as visualizações de ${fortes[1].nome.toLowerCase()} nesta conta.` : null;
+    poe(el, frase ? h("p", { style: "margin:0" }, frase) : null,
+      h("div", { class: "tabela-wrap" }, h("table", { class: "fmt" },
+        h("thead", null, h("tr", null, h("th", null, "Formato"), h("th", { class: "nr" }, "Posts"), h("th", null, "Visualizações (média)"), h("th", { class: "nr" }, "Engaj."), h("th", { class: "nr" }, "Salvos"))),
+        h("tbody", null, linhas.map((l) => h("tr", null,
+          h("td", null, h("span", { class: "nome" }, icone(l.ic), l.nome)), h("td", { class: "nr" }, l.n),
+          h("td", { class: "bar-cel" }, h("div", { class: "bar-linha", title: `${l.nome}: média de ${numero(l.views)} visualizações em ${l.n} ${l.n === 1 ? "post" : "posts"}` },
+            h("div", null, h("div", { class: "bar", style: `width:${Math.max(2, ((l.views || 0) / max) * 100).toFixed(1)}%` })), h("span", null, numero(l.views)))),
+          h("td", { class: "nr" }, pct(l.engaj)), h("td", { class: "nr" }, numero(l.salvos))))))));
+  }
+  function renderTops(c) {
+    const el = $("#pn-tops"); const k = S.pn.ordem; $("#pn-ordem").value = k;
+    const posts = [...(c.posts || [])].filter((p) => ehNum(p[k])).sort((a, b) => b[k] - a[k]).slice(0, mqCel.matches ? 5 : 8);
+    if (!posts.length) { poe(el, h("li", { class: "hint" }, c.semana ? "Nenhum post com esse número nos últimos 30 dias." : "Os posts aparecem depois da primeira atualização.")); return; }
+    const n = (chave, rot, valor) => h("span", { class: chave === k ? "em" : null }, h("b", null, valor), " " + rot);
+    poe(el, ...posts.map((p, i) => {
+      const tipo = TIPOS_IG[p.tipo];
+      const texto = String(p.legenda || "").split("\n").find((l) => l.trim()) || "Post sem legenda";
+      return h("li", { class: "top" }, h("span", { class: "pos" }, i + 1), icone(tipo ? tipo.ic : "nenhum"),
+        h("p", null, texto),
+        h("div", { class: "nums" }, n("views", "visualizações", numero(p.views)), n("alcance", "alcance", numero(p.alcance)), n("engaj", "engaj.", pct(p.engaj)),
+          n("salvos", "salvos", numero(p.salvos)), n("compart", "compart.", numero(p.compart)), n("comentarios", "coment.", numero(p.comentarios))),
+        h("div", { class: "rod" }, h("span", null, (tipo ? tipo.nome : "Post") + (p.data ? " · " + dataCurta(isoDia(new Date(p.data))) : "")),
+          p.link && /^https:\/\/www\.instagram\.com\//.test(p.link) ? h("a", { href: p.link, target: "_blank", rel: "noopener noreferrer" }, "Abrir no Instagram ↗") : null));
+    }));
+  }
+  function renderTendencias(c) {
+    const el = $("#pn-tendencias"); const an = analiseDe(c.id); const itens = (an && an.tendencias) || [];
+    if (!itens.length) { poe(el, h("p", { class: "hint" }, "Todo dia de manhã o Claude pesquisa o que está em alta no nicho desta conta e lista aqui. Cada assunto vira uma ideia no Calendário com um toque.")); return; }
+    poe(el, ...itens.slice(0, 6).map((t) => {
+      const titulo = String(t.titulo || "").slice(0, 140); const chave = c.id + "|" + titulo; const feito = S.pn.viraram.has(chave);
+      return h("div", { class: "tend" }, h("b", null, titulo), t.porque ? h("p", null, String(t.porque)) : null,
+        h("div", { class: "row" },
+          S.canWrite && S.db ? h("button", { class: "btn", type: "button", disabled: feito, onclick: (ev) => virarIdeia(c, t, chave, ev.currentTarget) }, feito ? "Está na caixa de ideias" : "Virar ideia") : null,
+          t.fonte && /^https?:\/\//.test(t.fonte) ? h("a", { href: t.fonte, target: "_blank", rel: "noopener noreferrer" }, "Fonte ↗") : null));
+    }), h("p", { class: "hint" }, "Pesquisa do Claude · " + quando(an.criadoEm)));
+  }
+  async function virarIdeia(c, t, chave, btn) {
+    const titulo = String(t.titulo || "").trim().slice(0, 140); if (!titulo) return;
+    const ideia = [t.porque ? String(t.porque) : "", `Assunto em alta visto no Painel (@${c.username || "conta"}).`, t.fonte && /^https?:\/\//.test(t.fonte) ? "Fonte: " + t.fonte : ""].filter(Boolean).join("\n\n");
+    const ok = await salvando(btn, () => criarPost({ titulo, ideia, tags: ["tendência"] }));
+    if (ok) { S.pn.viraram.add(chave); renderPainel(); toast("Ideia guardada na caixa do Calendário"); }
+  }
+  function renderGeral(at, c) {
+    const linha = (x) => {
+      const s = x.semana || {}; const a = x.anterior || {};
+      return h("tr", { "aria-current": String(c && x.id === c.id) },
+        h("td", null, h("button", { class: "link-acao", type: "button", onclick: () => { S.pn.sel = x.id; gravarLocal("painel.conta", x.id); renderPainel(); window.scrollTo({ top: 0, behavior: "smooth" }); } }, "@" + (x.username || "conta"))),
+        h("td", { class: "nr" }, numero(x.seguidores)), h("td", { class: "nr" }, numero(s.views)),
+        h("td", { class: "nr" }, deltaEl(variacao(s.views, a.views)) || "—"), h("td", { class: "nr" }, pct(s.engagement_rate)),
+        h("td", { class: "nr" }, numero(s.total_interactions)), h("td", null, x.erro ? h("span", { style: "color:var(--danger)" }, "falhou") : x.atualizadoEm ? quando(x.atualizadoEm) : "—"));
+    };
+    poe($("#pn-geral"), h("table", { class: "geral" },
+      h("thead", null, h("tr", null, h("th", null, "Conta"), h("th", { class: "nr" }, "Seguidores"), h("th", { class: "nr" }, "Visualizações"), h("th", { class: "nr" }, "vs semana antes"), h("th", { class: "nr" }, "Engaj."), h("th", { class: "nr" }, "Interações"), h("th", null, "Atualizado"))),
+      h("tbody", null, at.map(linha))));
+  }
+  function renderConfigContas() {
+    const box = $("#pn-config-lista");
+    const todas = [...S.contas].sort((a, b) => (ehNum(a.ordem) ? a.ordem : 99) - (ehNum(b.ordem) ? b.ordem : 99));
+    const assin = JSON.stringify([todas.map((x) => [x.id, x.username, x.ativa, x.nicho]), S.canWrite]);
+    if (box.dataset.assin === assin) return; // não atrapalha quem está digitando
+    box.dataset.assin = assin;
+    if (!todas.length) { poe(box, h("p", { class: "hint" }, "Nenhuma conta cadastrada ainda.")); return; }
+    poe(box, ...todas.map((x) => h("div", { class: "cfg-conta" },
+      h("label", null, h("input", { type: "checkbox", id: "cfg-ativa-" + x.id, checked: x.ativa !== false, disabled: !S.canWrite,
+        onchange: (ev) => salvarConta(x.id, { ativa: ev.target.checked }) }), h("span", null, h("b", null, "@" + (x.username || "conta")), x.nome ? h("span", { class: "hint", style: "display:block" }, x.nome) : null)),
+      h("input", { type: "text", id: "cfg-nicho-" + x.id, maxlength: "160", value: x.nicho || "", placeholder: "Nicho, ex.: passeios e rolês em São Paulo", "aria-label": "Nicho de @" + (x.username || "conta"), disabled: !S.canWrite,
+        onchange: (ev) => salvarConta(x.id, { nicho: ev.target.value.trim() }) }))));
+  }
+  function salvarConta(id, campos) {
+    if (!S.db) return toast("Abra a Central no claude.ai para salvar.");
+    emFila("contas/" + id, () => S.db.doc("contas/" + id).update(campos)).then(() => toast("Conta atualizada"), (e) => { console.error(e); toast(erroMsg(e)); });
+  }
+  $("#pn-ordem").addEventListener("change", (ev) => { S.pn.ordem = ev.target.value; renderPainel(); });
+
+  // ----- Atualizar agora: lê o Instagram pelo Pipeboard de quem está vendo e salva para o time -----
+  function desembrulhar(x) {
+    let v = x;
+    for (let i = 0; i < 2; i++) {
+      if (typeof v === "string") { try { v = JSON.parse(v); } catch { return v; } }
+      if (v && typeof v === "object" && typeof v.result === "string") { try { v = JSON.parse(v.result); } catch { /* fica como está */ } }
+    }
+    return v;
+  }
+  function msgMcp(e) {
+    const c = e && e.code;
+    if (c === "needs_reauth") return "Reconecte o Pipeboard no claude.ai (Configurações → Conectores) e tente de novo.";
+    if (c === "server_not_connected") return "Para atualizar, conecte o Pipeboard no claude.ai (Configurações → Conectores). Sem ele, os números chegam pela rotina diária.";
+    if (c === "selection_required") return "Escolha qual conector Pipeboard usar no aviso do claude.ai e tente de novo.";
+    if (c === "not_in_manifest") return "O Pipeboard não foi liberado para esta página. Libere nas permissões da página e tente de novo.";
+    if (c === "approval_required") return "Falta aprovar o uso do Pipeboard. Toque em “Atualizar agora” de novo e aprove no aviso.";
+    if (c === "blocked_by_policy") return "A organização bloqueou o Pipeboard para a sua conta.";
+    if (c === "server_unavailable" || c === "rate_limited") return "O Pipeboard não respondeu. Tente de novo em alguns minutos.";
+    if (c === "tool_error") return "O Instagram recusou: " + String(e.message || "erro sem detalhe").slice(0, 140);
+    if (c === "not_granted" || c === "capability_disabled" || c === "capability_removed") return "Esta tela não consegue usar o Pipeboard. Abra a Central no claude.ai.";
+    return "Não deu para falar com o Pipeboard agora. Tente de novo em instantes.";
+  }
+  const PARA_TUDO = ["needs_reauth", "server_not_connected", "selection_required", "not_in_manifest", "approval_required", "blocked_by_policy", "not_granted", "capability_disabled", "capability_removed"];
+  async function chamarIg(tool, input) {
+    try { return await S.pn.mcp.callTool(SERVIDOR_IG, tool, input, { cache: false }); }
+    catch (e) {
+      if (!(e && e.retryable)) throw e;
+      await new Promise((r) => setTimeout(r, Math.min(e.retryAfterMs || 0, 15000) || 1200 + Math.random() * 1500));
+      return S.pn.mcp.callTool(SERVIDOR_IG, tool, input, { cache: false }); // uma nova tentativa, só leitura
+    }
+  }
+  function resultadoIg(r) {
+    const p = desembrulhar(r && r.payload !== undefined ? r.payload : r);
+    const res = p && Array.isArray(p.results) ? p.results[0] : null;
+    if (!res) throw { code: "tool_error", message: (p && (p.error || p.message)) || "resposta vazia do Instagram" };
+    if (res.status && res.status !== "success" && res.status !== "no_data") throw { code: "tool_error", message: res.error || res.message || res.status };
+    return res;
+  }
+  function isoIg(ts) { if (!ts) return null; const d = new Date(String(ts).replace(/([+-]\d\d)(\d\d)$/, "$1:$2")); return isNaN(d) ? null : d.toISOString(); }
+  const numOuNulo = (x) => (ehNum(x) ? x : null);
+  async function atualizarConta(c) {
+    const base = { account_id: c.adContaId, instagram_account_id: c.id };
+    const [r7, r14, rp] = await Promise.all([
+      chamarIg("get_instagram_account_insights", { ...base, time_range: "last_7d", metrics: METRICAS_IG }),
+      chamarIg("get_instagram_account_insights", { ...base, time_range: "last_14d", metrics: METRICAS_IG }),
+      chamarIg("get_instagram_posts", { ...base, time_range: "last_30d", limit: 50, include_insights: true }),
+    ]);
+    const i7 = resultadoIg(r7).insights || {}; const i14 = resultadoIg(r14).insights || {};
+    const semana = {}; for (const k of CAMPOS_IG) if (ehNum(i7[k])) semana[k] = i7[k];
+    const anterior = {}; for (const k of SOMAVEIS) if (ehNum(i14[k]) && ehNum(i7[k])) anterior[k] = Math.max(0, i14[k] - i7[k]);
+    const posts = (resultadoIg(rp).posts || []).slice(0, 50).map((p) => { const ins = p.insights || {}; return {
+      id: String(p.media_id || ""), tipo: String(p.media_type || ""), legenda: String(p.caption || "").slice(0, 300),
+      link: /^https:\/\/www\.instagram\.com\//.test(p.permalink || "") ? p.permalink : null, data: isoIg(p.timestamp),
+      curtidas: numOuNulo(ehNum(p.like_count) ? p.like_count : ins.likes), comentarios: numOuNulo(ehNum(p.comment_count) ? p.comment_count : ins.comments),
+      alcance: numOuNulo(ins.reach), views: numOuNulo(ins.views), salvos: numOuNulo(ins.saved), compart: numOuNulo(ins.shares),
+      interacoes: numOuNulo(ins.total_interactions), engaj: numOuNulo(ins.engagement_rate) }; });
+    const seguidores = ehNum(i7.follower_count) ? i7.follower_count : numOuNulo(c.seguidores);
+    await emFila("contas/" + c.id, () => S.db.doc("contas/" + c.id).update({ seguidores, semana, anterior, posts, erro: null, atualizadoEm: agora(), atualizadoPor: S.myId, porClaude: false }));
+    await S.db.doc(`contas/${c.id}/historico/${isoDia(new Date())}`).set({ seguidores, alcance7: numOuNulo(semana.reach), views7: numOuNulo(semana.views),
+      interacoes7: numOuNulo(semana.total_interactions), engaj7: numOuNulo(semana.engagement_rate), criadoEm: agora() });
+  }
+  $("#pn-atualizar").addEventListener("click", async () => {
+    if (S.pn.atualizando || !S.pn.mcp || !S.db) return;
+    const lista = contasAtivas(); if (!lista.length) return;
+    S.pn.atualizando = true; const btn = $("#pn-atualizar"); btn.disabled = true;
+    let certas = 0; let parou = null; const falhas = [];
+    try {
+      for (let i = 0; i < lista.length; i++) {
+        const c = lista[i];
+        $("#pn-progresso").textContent = `Atualizando @${c.username} (${i + 1} de ${lista.length})…`;
+        try { await atualizarConta(c); certas++; }
+        catch (e) {
+          console.warn("painel", c.username, e);
+          if (e && PARA_TUDO.includes(e.code)) { parou = e; break; }
+          falhas.push(c.username);
+          if (e && e.code === "tool_error") emFila("contas/" + c.id, () => S.db.doc("contas/" + c.id).update({ erro: String(e.message || "erro").slice(0, 200), erroEm: agora() })).catch(() => {});
+        }
+      }
+    } finally {
+      S.pn.atualizando = false; btn.disabled = false;
+      $("#pn-progresso").textContent = parou ? "" : certas ? `Atualizado agora · ${certas} de ${lista.length} contas` : "";
+      if (parou) toast(msgMcp(parou));
+      else if (falhas.length) toast(`Não deu para atualizar ${falhas.map((u) => "@" + u).join(", ")}.`);
+      else if (certas) toast("Números atualizados");
+    }
+  });
+
   // ---------- inicialização ----------
   function renderTudo() {
     selectEstilos($("#np-estilo"), $("#np-estilo").value, false);
     selectEstilos($("#r-estilo"), $("#r-estilo").value, true);
-    renderProjetos(); renderListaEstilos(); renderRefs(); renderCalendario();
+    renderProjetos(); renderListaEstilos(); renderRefs(); renderCalendario(); renderPainel();
     if (!S.rascunho && S.estilos.length && S.loaded.estilos) selecionarEstilo((estiloPadrao() || S.estilos[0]).id);
   }
   function assinar(nome, chave) {
@@ -1925,6 +2328,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
 
   async function init() {
     $("#cal-filtros").open = !mqCel.matches;
+    S.pn.sel = lerLocal("painel.conta");
     mostrarAba(); renderPrevia(); iniciarPrevia(); renderTudo();
     const C = window.claude;
     if (!C || !C.use) { banner("Abra esta página no claude.ai para ver e salvar os dados da equipe."); for (const k in S.loaded) S.loaded[k] = true; renderTudo(); return; }
@@ -1940,6 +2344,17 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     if (!db) { banner("Entre na sua conta do claude.ai para ver os dados da equipe."); for (const k in S.loaded) S.loaded[k] = true; renderTudo(); return; }
     timer = setTimeout(() => banner("Ainda não consegui carregar os dados da equipe. Verifique a conexão; a página continua tentando."), 10000);
     assinar("estilos", "estilos"); assinar("referencias", "refs"); assinar("projetos", "projetos"); assinar("posts", "posts");
+    assinar("contas", "contas"); assinar("analises", "analises");
+    // Pipeboard pela página: só aparece o botão para quem tem o conector (os outros veem os números salvos)
+    C.use("mcp").then(async (mcp) => {
+      S.pn.mcp = mcp; if (!mcp) return;
+      try {
+        const lt = await mcp.listTools(SERVIDOR_IG);
+        const sv = (lt.servers || []).find((x) => x.server === SERVIDOR_IG);
+        S.pn.podeAtualizar = !!sv && (sv.tools || []).length > 0;
+      } catch (e) { console.warn("mcp", e); S.pn.podeAtualizar = false; }
+      renderPainel();
+    }, () => {});
   }
   init();
 })();
