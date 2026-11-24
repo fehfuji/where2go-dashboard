@@ -458,6 +458,25 @@ table.geral { width: 100%; border-collapse: collapse; font-size: 13.5px; min-wid
 .fila-aviso > span { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
 .pd-recado { display: block; margin-top: 2px; color: var(--muted); font-size: 12.5px; }
 .bruto { display: grid; gap: 8px; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 8px; }
+/* Carrossel no modelo */
+.fc-vaga { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--bg); min-width: 0; }
+.fc-vaga[open] { display: grid; gap: 10px; padding-bottom: 12px; }
+.fc-vaga > summary { cursor: pointer; display: flex; gap: 8px; align-items: baseline; min-width: 0; padding: 2px 0; }
+.fc-vaga > summary b { white-space: nowrap; font-weight: 600; }
+.fc-resumo { color: var(--muted); font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.fc-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px 10px; }
+.fc-campos { display: grid; gap: 6px; }
+.fc-campo { display: grid; grid-template-columns: minmax(90px, 0.6fr) minmax(0, 1.4fr) auto; gap: 6px; align-items: start; }
+.fc-campo .btn { padding: 6px; }
+@media (max-width: 520px) { .fc-campo { grid-template-columns: minmax(0, 1fr) auto; } .fc-campo > :nth-child(2) { grid-column: 1 / -1; grid-row: 2; } }
+.fc-campo input, .fc-campo textarea, .fc-grade input { width: 100%; min-width: 0; }
+.fc-campo input[type="text"], .fc-campo textarea { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 7px 10px; font: inherit; font-size: 14px; }
+.fc-campo textarea { resize: vertical; min-height: 40px; }
+.fc-previa { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x proximity; }
+.fc-slide { margin: 0; flex: none; width: 150px; display: grid; gap: 4px; scroll-snap-align: start; }
+.fc-slide canvas, .fc-slide img { width: 150px; height: 187.5px; border-radius: 6px; background: var(--surface-2); display: block; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.fc-slide figcaption { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 6px; }
+.fc-mini { width: 44px; height: 44px; object-fit: contain; border-radius: 6px; background: var(--surface-2); }
 .bruto progress { width: 100%; height: 8px; accent-color: var(--accent); }
 .bruto textarea { width: 100%; resize: vertical; }
 .selo .ic { width: 12px; height: 12px; }
@@ -956,6 +975,9 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
         </div>
       </form>
     </section>
+    <section class="f-sec so-edicao" id="f-carrossel" aria-label="Carrossel no modelo" hidden>
+      <div class="stack" id="fc-corpo"></div>
+    </section>
     <section class="f-sec so-edicao" aria-label="Anexos">
       <span class="eyebrow">Anexos</span>
       <div class="anexos" id="f-anexos"></div>
@@ -1202,6 +1224,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   const TIPOS_PEDIDO = {
     video: { nome: "Edição de vídeo", ic: "filme" }, analise: { nome: "Análise da conta", ic: "grafico" },
     relatorio: { nome: "Relatório da semana", ic: "relatorio" }, tendencias: { nome: "Assuntos em alta", ic: "nenhum" },
+    carrossel: { nome: "Vagas do carrossel", ic: "carrossel" },
   };
   const PED_ATIVOS = ["aguardando", "em_andamento"];
   const PED_TRAVADO_MS = 3 * 3600e3; // em andamento há mais de 3 h: a sessão caiu e o pedido volta para a fila
@@ -1251,7 +1274,8 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   // Cria um pedido (um por alvo de cada vez). `silencioso`: o pedido vem junto de outra ação que já foi registrada.
   async function criarPedido(tipo, alvo, extra = {}, btn = null) {
     if (!S.db || !S.canWrite) return false;
-    const mesmo = (p) => p.tipo === tipo && (alvo.projetoId ? p.projetoId === alvo.projetoId : alvo.contaId ? p.contaId === alvo.contaId : p.clienteId === (alvo.clienteId || null) && !p.contaId);
+    const mesmo = (p) => p.tipo === tipo && (alvo.projetoId ? p.projetoId === alvo.projetoId : tipo === "carrossel" ? p.postId === alvo.postId
+      : alvo.contaId ? p.contaId === alvo.contaId : p.clienteId === (alvo.clienteId || null) && !p.contaId);
     if (pedidoAtivo((p) => mesmo(p) && !travado(p))) { if (!extra.silencioso) toast("Isso já está na fila do Claude."); return true; }
     const doc = {
       tipo, status: "aguardando", por: S.myId, em: agora(),
@@ -1261,7 +1285,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     };
     const ok = await salvando(btn, () => S.db.collection("pedidos").add(doc));
     if (!ok) return false;
-    const alvoTx = tipo === "video" ? `a edição do vídeo de “${doc.titulo || "um post"}”` : tipo === "analise" ? `a análise da ${doc.titulo}`
+    const alvoTx = tipo === "video" ? `a edição do vídeo de “${doc.titulo || "um post"}”` : tipo === "carrossel" ? `as vagas do carrossel “${doc.titulo || "um post"}”` : tipo === "analise" ? `a análise da ${doc.titulo}`
       : tipo === "relatorio" ? `o relatório da semana de ${doc.titulo}` : `os assuntos em alta da ${doc.titulo}`;
     if (!extra.silencioso) registrar("pedido", `pediu ao Claude ${alvoTx}`, { postId: doc.postId || undefined, clienteId: doc.clienteId });
     if (!extra.semAviso) toast(gatilhoFila() ? `Pedido na fila do Claude. Começa ${rotuloRodada()}.` : "Pedido na fila do Claude.");
@@ -1289,7 +1313,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     finally { btn.disabled = false; renderFila(); }
   }
   function alvoPedido(p) {
-    if (p.tipo === "video") { const post = p.postId ? postPorId(p.postId) : null; return (post && post.titulo) || p.titulo || "Vídeo"; }
+    if (p.tipo === "video" || p.tipo === "carrossel") { const post = p.postId ? postPorId(p.postId) : null; return (post && post.titulo) || p.titulo || (p.tipo === "video" ? "Vídeo" : "Carrossel"); }
     return p.titulo || (p.clienteId ? nomeCliente(p.clienteId) : "");
   }
   function chipPedido(p) {
@@ -1301,7 +1325,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
   function linhaPedido(p) {
     const tp = TIPOS_PEDIDO[p.tipo] || { nome: p.tipo, ic: "nenhum" };
     const podeCancelar = p.status === "aguardando" && S.canWrite && (p.por === S.myId || S.isOwner);
-    const abrir = p.tipo === "video" && p.postId && postPorId(p.postId) ? () => abrirFicha(p.postId)
+    const abrir = (p.tipo === "video" || p.tipo === "carrossel") && p.postId && postPorId(p.postId) ? () => abrirFicha(p.postId)
       : p.tipo === "relatorio" ? () => { if (p.resultado && /^[\w-]{1,200}$/.test(p.resultado)) S.rlSel = p.resultado; location.hash = "relatorios"; }
       : p.contaId ? () => { S.pn.sel = p.contaId; gravarLocal("painel.conta", p.contaId); location.hash = p.tipo === "tendencias" ? "ideias" : "desempenho"; } : null;
     return h("div", { class: "pedido" },
@@ -1416,6 +1440,441 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       console.warn("baixar", e); const c = e && e.code;
       if (c !== "declined") toast(c === "unavailable" || c === "not_granted" ? "Baixar não funciona nesta tela. Abra a Central no claude.ai pelo navegador." : "Não deu para baixar agora. Tente de novo.");
     } finally { btn.disabled = false; }
+  }
+
+  // ---------- CARROSSEL NO MODELO: desenho dos slides (canvas, 1080×1350) ----------
+  // As artes de fundo de cada modelo ficam nos arquivos da Central (ids em MODELOS_CARROSSEL). O texto é desenhado
+  // por cima com fontes do Google Fonts parecidas com as do Canva (as originais não podem ser copiadas).
+  const CW = 1080, CH = 1350;
+  const FONTES_CARROSSEL = "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@96,85,800&family=DM+Sans:wght@700&family=Figtree:wght@700&family=Montserrat:wght@900&family=Poppins:wght@700;900&family=Public+Sans:wght@300;700&family=Raleway:wght@700&family=Urbanist:wght@700&display=block";
+  const F = {
+    titulo: '"Bricolage Grotesque", "Arial Narrow", sans-serif', // no lugar da Agrandir Narrow Bold
+    public: '"Public Sans", sans-serif', montserrat: '"Montserrat", sans-serif', raleway: '"Raleway", sans-serif',
+    poppins: '"Poppins", sans-serif', dm: '"DM Sans", sans-serif', glacial: '"Urbanist", sans-serif', commons: '"Figtree", sans-serif',
+  };
+  let fontesProntas = null;
+  function carregarFontesCarrossel() {
+    if (fontesProntas) return fontesProntas;
+    if (!document.querySelector("link[data-carrossel]")) document.head.append(h("link", { rel: "stylesheet", href: FONTES_CARROSSEL, "data-carrossel": "" }));
+    const pedidos = ['800 60px "Bricolage Grotesque"', '700 40px "DM Sans"', '700 40px "Figtree"', '900 40px "Montserrat"', '700 40px "Poppins"', '900 40px "Poppins"',
+      '300 40px "Public Sans"', '700 40px "Public Sans"', '700 40px "Raleway"', '700 40px "Urbanist"'];
+    const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+    fontesProntas = (async () => { for (let i = 0; i < 40 && !document.querySelector("link[data-carrossel]").sheet; i++) await espera(100);
+      await Promise.race([Promise.all(pedidos.map((f) => document.fonts.load(f, "AÁãç$1"))), espera(6000)]).catch(() => {}); })();
+    return fontesProntas;
+  }
+  const imagensCache = new Map();
+  function carregarImagem(src) {
+    if (!src) return Promise.resolve(null);
+    if (!imagensCache.has(src)) imagensCache.set(src, new Promise((ok) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => { imagensCache.delete(src); ok(null); }; im.src = src; }));
+    return imagensCache.get(src);
+  }
+  // Quebra o texto em linhas que cabem em `largura` (respeita as quebras de linha que a pessoa digitou)
+  function quebrar(ctx, texto, largura) {
+    const linhas = [];
+    for (const par of String(texto || "").split("\n")) {
+      const palavras = par.split(/\s+/).filter(Boolean); let atual = "";
+      if (!palavras.length) { linhas.push(""); continue; }
+      for (const w of palavras) {
+        const teste = atual ? atual + " " + w : w;
+        if (ctx.measureText(teste).width <= largura || !atual) atual = teste; else { linhas.push(atual); atual = w; }
+      }
+      linhas.push(atual);
+    }
+    return linhas;
+  }
+  // Maior tamanho (entre min e max) em que o texto cabe numa linha de `largura`
+  function tamanhoQueCabe(ctx, texto, peso, familia, max, min, largura) {
+    for (let s = max; s >= min; s -= 2) { ctx.font = `${peso} ${s}px ${familia}`; if (ctx.measureText(texto).width <= largura) return s; }
+    return min;
+  }
+  function textoGirado(ctx, texto, x, y, graus, alinhar = "left") {
+    ctx.save(); ctx.translate(x, y); ctx.rotate((graus * Math.PI) / 180); ctx.textAlign = alinhar; ctx.fillText(texto, 0, 0); ctx.restore();
+  }
+  function cobrir(ctx, im, x, y, w, h) { // imagem preenchendo a área (corta o que sobra), como "cover"
+    const r = Math.max(w / im.width, h / im.height); const iw = im.width * r, ih = im.height * r;
+    ctx.drawImage(im, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih);
+  }
+  function conter(ctx, im, x, y, w, h, alinhar = "left") {
+    const r = Math.min(w / im.width, h / im.height); const iw = im.width * r, ih = im.height * r;
+    ctx.drawImage(im, alinhar === "center" ? x + (w - iw) / 2 : alinhar === "right" ? x + w - iw : x, y + (h - ih) / 2, iw, ih);
+  }
+  // Logo em uma cor só (branco na capa escura, preto no slide branco), como nos modelos originais
+  function silhueta(im, cor) {
+    const c = document.createElement("canvas"); c.width = im.naturalWidth || im.width; c.height = im.naturalHeight || im.height;
+    const x = c.getContext("2d"); x.drawImage(im, 0, 0); x.globalCompositeOperation = "source-in"; x.fillStyle = cor; x.fillRect(0, 0, c.width, c.height);
+    return c;
+  }
+  function retArredondado(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+  const CREME = "#fffae7";
+  const curto = (s, n) => String(s || "").trim().slice(0, n);
+  const bolsaCurta = (b) => { const t = curto(b, 40); return t.replace(/\s+/g, "").replace(/,00$/, "") || t; };
+
+  // ---- modelo "Nube · Vagas de estágio" ----
+  async function slideNubeCapa(ctx, m, d) {
+    const fundo = await carregarImagem(blob(m.fundos.capa)); if (fundo) ctx.drawImage(fundo, 0, 0, CW, CH);
+    const L = (d.capa && d.capa.linhas) || [];
+    const linha = (texto, x, y, graus, max, cor, sombra) => {
+      if (!texto) return;
+      const s = tamanhoQueCabe(ctx, texto, 800, F.titulo, max, 50, 700); ctx.font = `800 ${s}px ${F.titulo}`; ctx.textBaseline = "alphabetic";
+      if (sombra) { ctx.fillStyle = "#000"; for (const k of [4, 2]) textoGirado(ctx, texto, x + k, y + k, graus); }
+      ctx.fillStyle = cor; textoGirado(ctx, texto, x, y, graus);
+    };
+    linha(curto(L[0], 30), 314, 640, 4, 168, CREME, true);
+    linha(curto(L[1], 20), 418, 750, 4, 96, CREME, true);
+    linha(curto(L[2], 30), 297, 915, -5, 165, CREME, true);
+    if (L[3]) { // "abertas agora": verde com contorno preto
+      const t = curto(L[3], 30); const s = tamanhoQueCabe(ctx, t, 800, F.titulo, 98, 44, 640); ctx.font = `800 ${s}px ${F.titulo}`;
+      ctx.save(); ctx.translate(298, 1020); ctx.rotate((-3.4 * Math.PI) / 180); ctx.lineJoin = "round"; ctx.lineWidth = 10; ctx.strokeStyle = "#000"; ctx.strokeText(t, 0, 0); ctx.fillStyle = "#89eb47"; ctx.fillText(t, 0, 0); ctx.restore();
+    }
+  }
+  async function slideNubeVaga(ctx, m, d, v, i) {
+    // título (área), centralizado, com sublinhado embaixo de cada palavra
+    const titulo = curto(v.titulo, 40) || "Vaga";
+    const st = tamanhoQueCabe(ctx, titulo, 800, F.titulo, 136, 64, 930); ctx.font = `800 ${st}px ${F.titulo}`;
+    const wt = ctx.measureText(titulo).width; const x0 = (CW - wt) / 2; const yb = 262;
+    // o fundo 1 tem uma estrela ao lado do título: título comprido usa os fundos 2 e 3 (estrela no canto)
+    const fs = m.fundos.vagas; let k = i % fs.length; if (k === 0 && x0 + wt > 700 && fs.length > 1) k = 1 + (i % (fs.length - 1));
+    const fundo = await carregarImagem(blob(fs[k])); if (fundo) ctx.drawImage(fundo, 0, 0, CW, CH);
+    ctx.font = `800 ${st}px ${F.titulo}`; ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = CREME; ctx.textAlign = "left"; ctx.fillText(titulo, x0, yb);
+    let cx = x0; const esp = ctx.measureText(" ").width;
+    for (const w of titulo.split(" ")) { const ww = ctx.measureText(w).width; ctx.fillRect(cx, yb + 8, ww, 11); cx += ww + esp; }
+    // etiqueta "Bolsa: R$1.200" (retângulo creme inclinado)
+    const bolsa = bolsaCurta(v.bolsa);
+    if (bolsa) {
+      const tb = "Bolsa: " + bolsa; const sb = tamanhoQueCabe(ctx, tb, 800, F.titulo, 70, 40, 560); ctx.font = `800 ${sb}px ${F.titulo}`;
+      const wb = ctx.measureText(tb).width + 70, hb = sb * 1.55;
+      ctx.save(); ctx.translate(CW / 2 - 10, 378); ctx.rotate((-3.4 * Math.PI) / 180);
+      ctx.fillStyle = CREME; ctx.fillRect(-wb / 2, -hb / 2, wb, hb); ctx.fillStyle = "#1c2824"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(tb, 0, 4); ctx.restore();
+    }
+    // campos: "Rótulo: texto", quebrando linhas; diminui a letra até caber
+    const campos = (v.campos || []).filter((c) => (c.texto || "").trim() || (c.rotulo || "").trim()).slice(0, 8);
+    const X = 137, LARG = 700, TOPO = 540, FIM = 1085;
+    let s = 54, blocos;
+    for (; s >= 30; s -= 2) {
+      ctx.font = `800 ${s}px ${F.titulo}`;
+      blocos = campos.map((c) => quebrar(ctx, (c.rotulo ? c.rotulo.replace(/:?\s*$/, ":") + " " : "") + (c.texto || "").trim(), LARG));
+      const altura = blocos.reduce((a, b) => a + b.length * s * 1.06, 0) + Math.max(0, blocos.length - 1) * s * 0.42;
+      if (TOPO + altura <= FIM) break;
+    }
+    ctx.fillStyle = CREME; ctx.textAlign = "left"; ctx.textBaseline = "top"; let y = TOPO;
+    for (const b of blocos || []) { for (const l of b) { ctx.fillText(l, X, y); y += s * 1.06; } y += s * 0.42; }
+    // código da vaga
+    if (v.codigo) { ctx.font = `800 42px ${F.titulo}`; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillText("Código da vaga: " + curto(v.codigo, 20), CW / 2, 1160); }
+  }
+  async function slideNubeFechamento(ctx, m, d) {
+    const fundo = await carregarImagem(blob(m.fundos.fechamento)); if (fundo) ctx.drawImage(fundo, 0, 0, CW, CH);
+    ctx.textBaseline = "alphabetic"; ctx.fillStyle = CREME;
+    ctx.font = `800 126px ${F.titulo}`; ctx.textAlign = "right"; ctx.fillText("E aí, vamos", 780, 530); ctx.fillText("iniciar a", 780, 623);
+    // "carreira" numa etiqueta creme inclinada
+    ctx.save(); ctx.translate(546, 673); ctx.rotate((4 * Math.PI) / 180); ctx.font = `800 87px ${F.titulo}`;
+    const wc = ctx.measureText("carreira").width + 50; ctx.fillStyle = CREME; ctx.fillRect(-wc / 2, -56, wc, 112); ctx.fillStyle = "#000"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("carreira", 0, 4); ctx.restore();
+    ctx.fillStyle = CREME; ctx.font = `800 115px ${F.titulo}`; textoGirado(ctx, "na sua área?", 304, 820, 4.6);
+    const cta = curto(d.fechamento && d.fechamento.cta, 160) || "Aplique para as vagas em nube.com.br buscando pelo código da vaga";
+    ctx.font = `800 52px ${F.titulo}`; ctx.textAlign = "center"; ctx.textBaseline = "top";
+    quebrar(ctx, cta, 620).slice(0, 4).forEach((l, k) => ctx.fillText(l, 557, 985 + k * 54));
+  }
+
+  // ---- modelo "Nube · Programa de estágio" (empresa) ----
+  async function slideProgramaCapa(ctx, m, d) {
+    const foto = await carregarImagem(blob(d.foto));
+    ctx.fillStyle = "#1c2420"; ctx.fillRect(0, 0, CW, CH);
+    if (foto) cobrir(ctx, foto, 0, 0, CW, CH);
+    else { ctx.fillStyle = "#33413b"; ctx.fillRect(0, 0, CW, CH); ctx.fillStyle = "#9fb0a8"; ctx.font = `700 40px ${F.public}`; ctx.textAlign = "center"; ctx.fillText("Envie a foto da capa", CW / 2, 480); }
+    const g = ctx.createLinearGradient(0, 640, 0, CH); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.55)"); ctx.fillStyle = g; ctx.fillRect(0, 640, CW, CH - 640);
+    // marca da empresa no alto
+    const logo = await carregarImagem(blob(d.logo)); let xn = 41;
+    if (logo) { conter(ctx, silhueta(logo, "#fff"), 41, 50, 105, 119); xn = 160; }
+    const nome = curto(d.empresa, 40).toUpperCase();
+    if (nome) { ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.textBaseline = "top"; const s = tamanhoQueCabe(ctx, nome.split(" ").reduce((a, b) => (b.length > a.length ? b : a), ""), 900, F.montserrat, 59, 30, 520);
+      ctx.font = `900 ${s}px ${F.montserrat}`; quebrar(ctx, nome, 560).slice(0, 2).forEach((l, k) => ctx.fillText(l, xn, 52 + k * s * 0.78)); }
+    ctx.fillStyle = "#fbf6e5"; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    const chamada = curto(d.chamada, 30) || "Atenção,"; ctx.font = `300 ${tamanhoQueCabe(ctx, chamada, 300, F.public, 111, 50, 900)}px ${F.public}`; ctx.fillText(chamada, 533, 895);
+    const area = curto(d.area, 40) || "Área"; ctx.font = `700 ${tamanhoQueCabe(ctx, area, 700, F.public, 145, 60, 980)}px ${F.public}`; ctx.fillText(area, CW / 2, 1020);
+    const sub = curto(d.subtitulo, 60) || "tem oportunidade na área"; const ss = tamanhoQueCabe(ctx, sub, 700, F.public, 57, 30, 600); ctx.font = `700 ${ss}px ${F.public}`;
+    const wp = Math.max(661, ctx.measureText(sub).width + 80);
+    ctx.fillStyle = "#80d566"; retArredondado(ctx, (CW - wp) / 2, 1052, wp, 89, 44.5); ctx.fill();
+    ctx.fillStyle = "#000"; ctx.textBaseline = "middle"; ctx.fillText(sub, CW / 2, 1098);
+    const nube = await carregarImagem(blob(m.fundos.logo)); if (nube) ctx.drawImage(nube, 504, 1203, 84, 85);
+  }
+  async function slideProgramaDetalhes(ctx, m, d) {
+    const fundo = await carregarImagem(blob(m.fundos.detalhes)); if (fundo) ctx.drawImage(fundo, 0, 0, CW, CH);
+    ctx.fillStyle = "#050505"; ctx.textBaseline = "top";
+    const nome = curto(d.empresa, 40).toUpperCase();
+    const logo = await carregarImagem(blob(d.logo)); let xn = 402;
+    if (logo) conter(ctx, silhueta(logo, "#050505"), 300, 31, 95, 85, "right"); else xn = 300;
+    if (nome) { ctx.textAlign = "left"; const ln = nome.split(" "); const l2 = ln.length > 1 ? [ln.slice(0, Math.ceil(ln.length / 2)).join(" "), ln.slice(Math.ceil(ln.length / 2)).join(" ")] : [nome];
+      const s = Math.min(42, ...l2.map((l) => tamanhoQueCabe(ctx, l, 900, F.poppins, 42, 18, 615 - xn)));
+      ctx.font = `900 ${s}px ${F.poppins}`; l2.forEach((l, k) => ctx.fillText(l, xn, (l2.length > 1 ? 30 : 52) + k * s * 0.82)); }
+    // título do programa
+    ctx.textAlign = "center"; ctx.font = `700 46px ${F.raleway}`;
+    const prog = "P R O G R A M A   D E   E S T Á G I O"; ctx.fillText(prog, CW / 2, 208);
+    if (nome) { ctx.font = `700 ${tamanhoQueCabe(ctx, nome, 700, F.poppins, 67, 34, 900)}px ${F.poppins}`; ctx.fillText(nome.split("").join(String.fromCharCode(8202)), CW / 2, 255); }
+    // linhas: rótulo à esquerda, valor à direita, centralizados na altura da linha
+    const L = d.linhas || {};
+    const linhas = [["BOLSA-AUXÍLIO", L.bolsa, 408, 521], ["JORNADA", L.jornada, 532, 637], ["LOCALIZAÇÃO", L.localizacao, 649, 751], ["CURSOS E\nREQUISITOS", L.cursos, 763, 930], ["BENEFÍCIOS", L.beneficios, 944, 1097]];
+    for (const [rot, val, t, b] of linhas) {
+      const meio = (t + b) / 2; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.font = `700 31px ${F.glacial}`; const rl = rot.split("\n"); rl.forEach((l, k) => ctx.fillText(l, 202, meio + (k - (rl.length - 1) / 2) * 36));
+      const texto = curto(val, 400); if (!texto) continue;
+      let s = 38, ls;
+      for (; s >= 18; s -= 1) { ctx.font = `700 ${s}px ${F.dm}`; ls = quebrar(ctx, texto, 480); if (ls.length * s * 1.12 <= b - t - 26) break; }
+      ls.forEach((l, k) => ctx.fillText(l, 510, meio + (k - (ls.length - 1) / 2) * s * 1.12));
+    }
+    const insc = curto(d.inscricoes, 60);
+    if (insc) { ctx.font = `700 ${tamanhoQueCabe(ctx, "INSCRIÇÕES: " + insc.toUpperCase(), 700, F.glacial, 35, 22, 760)}px ${F.glacial}`; ctx.textBaseline = "middle"; ctx.fillText("INSCRIÇÕES: " + insc.toUpperCase(), 230, 1162); }
+    const palavra = curto(d.palavra, 30).toUpperCase() || (nome.split(" ")[0] || "EU QUERO");
+    const cta = `COMENTE “${palavra}” E RECEBA O LINK`; ctx.fillStyle = "#f4f4f4";
+    ctx.font = `700 ${tamanhoQueCabe(ctx, cta, 700, F.commons, 39, 22, 760)}px ${F.commons}`; ctx.textBaseline = "middle"; ctx.fillText(cta, 130, 1250);
+  }
+
+  // Lista de slides de um carrossel (cada um: rótulo + função de desenho)
+  function slidesDe(d) {
+    const m = MODELOS_CARROSSEL[d && d.modelo]; if (!m) return [];
+    if (d.modelo === "nube-vagas") return [
+      { rot: "Capa", desenhar: (ctx) => slideNubeCapa(ctx, m, d) },
+      ...(d.vagas || []).map((v, i) => ({ rot: "Vaga " + (i + 1), desenhar: (ctx) => slideNubeVaga(ctx, m, d, v, i) })),
+      { rot: "Fechamento", desenhar: (ctx) => slideNubeFechamento(ctx, m, d) },
+    ];
+    if (d.modelo === "nube-programa") return [
+      { rot: "Capa", desenhar: (ctx) => slideProgramaCapa(ctx, m, d) },
+      { rot: "Detalhes", desenhar: (ctx) => slideProgramaDetalhes(ctx, m, d) },
+    ];
+    return [];
+  }
+  async function desenharSlide(slide, canvas) {
+    await carregarFontesCarrossel();
+    canvas.width = CW; canvas.height = CH; const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, CW, CH); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    await slide.desenhar(ctx);
+    return canvas;
+  }
+
+  // ---------- CARROSSEL NO MODELO: modelos, editor na ficha e imagens prontas ----------
+  const CAMPOS_VAGA = ["Empresa", "Áreas", "Local", "Requisitos desejados", "Benefícios"];
+  const MODELOS_CARROSSEL = {
+    "nube-vagas": {
+      nome: "Nube · Vagas de estágio", clienteId: "nube", descricao: "Capa com foto, um card laranja por vaga e o fechamento com o CTA.",
+      fundos: { capa: "e39d6ce0a03d326798a6ff6131b9e9f1", vagas: ["407566bfad3e0c0c623d40f0aeb58fb0", "9d751a9d17c549e68f9b65422f087f3c", "78369b137cada4b9abbcb3ef0e2f24bb"], fechamento: "894c0979004fd59c6a1ba870de801bb8" },
+      novo: () => ({ modelo: "nube-vagas", links: [], capa: { linhas: ["Vagas", "de", "Estágio", "abertas agora"] }, vagas: [], fechamento: { cta: "Aplique para as vagas em nube.com.br buscando pelo código da vaga" }, imagens: [], imagensDe: null }),
+    },
+    "nube-programa": {
+      nome: "Nube · Programa de estágio", clienteId: "nube", descricao: "Capa com a foto e a marca da empresa e o card com bolsa, jornada, local, requisitos e benefícios.",
+      fundos: { detalhes: "c01cbec7ee4d5c3370f247437aa1803b", logo: "bf700d2760346394cb863fa5a035f881" },
+      novo: () => ({ modelo: "nube-programa", links: [], empresa: "", logo: null, foto: null, chamada: "Atenção,", area: "", subtitulo: "tem oportunidade na área",
+        linhas: { bolsa: "", jornada: "", localizacao: "", cursos: "", beneficios: "" }, inscricoes: "", palavra: "", imagens: [], imagensDe: null }),
+    },
+  };
+  const novaVaga = () => ({ link: "", titulo: "", bolsa: "", codigo: "", campos: CAMPOS_VAGA.map((r) => ({ rotulo: r, texto: "" })) });
+  const copia = (x) => (x == null ? null : JSON.parse(JSON.stringify(x)));
+  const assinaturaConteudo = (d) => { if (!d) return ""; const { imagens, imagensDe, geradoEm, geradoPor, ...resto } = d; return JSON.stringify(resto); };
+  const fc = { postId: null, dados: null, enviados: new Set(), rev: 0, abertas: new Set(), gerando: null, previaT: null, previaN: 0 };
+  const pedidoDoCarrossel = (pid) => (p) => p.tipo === "carrossel" && p.postId === pid;
+  function adotar(d) { fc.dados = copia(d); fc.enviados.add(JSON.stringify(d || null)); fc.rev++; }
+  // Grava o carrossel no post (espera a pessoa parar de digitar) e redesenha a prévia
+  function mudouCarrossel(estrutura) {
+    const f = S.ficha; if (!f || !f.id || !S.canWrite) return;
+    const v = copia(fc.dados); fc.enviados.add(JSON.stringify(v)); if (fc.enviados.size > 60) fc.enviados.delete(fc.enviados.values().next().value);
+    salvarPost(f.id, { carrossel: v }, estrutura ? 0 : 900);
+    if (estrutura) { fc.rev++; const p = postPorId(f.id); if (p) renderCarrossel(p); }
+    agendarPrevia();
+  }
+  function agendarPrevia() { clearTimeout(fc.previaT); fc.previaT = setTimeout(desenharPrevia, 350); }
+  const canvasGrande = () => fc.cg || (fc.cg = document.createElement("canvas"));
+  async function desenharPrevia() {
+    const box = $("#fc-previa"); if (!box || !fc.dados) return;
+    const n = ++fc.previaN; const slides = slidesDe(fc.dados);
+    const cards = [...box.querySelectorAll("canvas")];
+    if (cards.length !== slides.length) poe(box, ...slides.map((s) => h("figure", { class: "fc-slide" }, h("canvas", { width: "270", height: "338", "aria-label": "Prévia: " + s.rot }), h("figcaption", null, s.rot))));
+    const telas = [...box.querySelectorAll("canvas")];
+    for (let i = 0; i < slides.length; i++) {
+      if (n !== fc.previaN) return; // chegou mudança nova: recomeça
+      const g = await desenharSlide(slides[i], canvasGrande()); const c = telas[i]; if (!c) continue;
+      const x = c.getContext("2d"); x.clearRect(0, 0, c.width, c.height); x.drawImage(g, 0, 0, c.width, c.height);
+      const cap = c.nextSibling; if (cap) cap.textContent = slides[i].rot;
+    }
+    const aviso = $("#fc-desatualizado");
+    if (aviso) aviso.hidden = !((fc.dados.imagens || []).length && fc.dados.imagensDe !== assinaturaConteudo(fc.dados));
+  }
+  async function gerarImagens(btn) {
+    const f = S.ficha; const p = f && postPorId(f.id); if (!p || !S.assets || !fc.dados) return;
+    const slides = slidesDe(fc.dados); if (!slides.length) return;
+    fc.gerando = { feito: 0, total: slides.length }; renderCarrossel(p);
+    const novas = [];
+    try {
+      for (let i = 0; i < slides.length; i++) {
+        const c = await desenharSlide(slides[i], canvasGrande());
+        const b = await new Promise((ok, erro) => c.toBlob((x) => (x ? ok(x) : erro({ code: "invalid_request" })), "image/jpeg", 0.93));
+        const up = await S.assets.upload(b, { type: "image/jpeg" });
+        novas.push({ id: up.id, rot: slides[i].rot }); fc.gerando.feito = i + 1; atualizarProgressoGeracao();
+      }
+      const antigas = (fc.dados.imagens || []).map((x) => x.id);
+      fc.dados.imagens = novas; fc.dados.imagensDe = assinaturaConteudo(fc.dados); fc.dados.geradoEm = agora(); fc.dados.geradoPor = S.myId;
+      const v = copia(fc.dados); fc.enviados.add(JSON.stringify(v));
+      if (!(await salvarPost(p.id, { carrossel: v }))) throw { code: "invalid_argument" };
+      registrar("carrossel", `gerou as imagens do carrossel “${String(p.titulo || "um post").slice(0, 80)}” (${novas.length})`, { postId: p.id, clienteId: p.clienteId || null });
+      for (const id of antigas) { try { await S.assets.delete(id); } catch (e) { console.warn(e); } }
+      toast(`Pronto: ${novas.length} imagens no post.`);
+    } catch (e) {
+      console.error(e); toast(erroMsg(e));
+      for (const x of novas) { if (!(fc.dados.imagens || []).some((y) => y.id === x.id)) { try { await S.assets.delete(x.id); } catch (z) { console.warn(z); } } }
+    } finally { fc.gerando = null; fc.rev++; renderCarrossel(p); }
+  }
+  function atualizarProgressoGeracao() { const el = $("#fc-gerando"); if (el && fc.gerando) el.textContent = `Gerando as imagens: ${fc.gerando.feito} de ${fc.gerando.total}…`; }
+  async function baixarImagem(img, nome, btn) {
+    if (!S.downloads) return false;
+    if (btn) btn.disabled = true;
+    try { const r = await fetch(blob(img.id)); if (!r.ok) throw new Error("http " + r.status); await S.downloads.save({ filename: nome, data: await r.blob() }); return true; }
+    catch (e) { console.warn("baixar", e); const c = e && e.code; if (c !== "declined") toast(c === "unavailable" || c === "not_granted" ? "Baixar não funciona nesta tela. Abra a Central no claude.ai pelo navegador." : "Não deu para baixar agora. Tente de novo."); return false; }
+    finally { if (btn) btn.disabled = false; }
+  }
+  async function enviarImagemCarrossel(campo, arq) {
+    if (!S.assets || !arq) return;
+    if (!/^image\/(png|jpeg|webp)$/.test(arq.type)) { toast("Use uma imagem PNG, JPG ou WebP."); return; }
+    try {
+      toast("Enviando a imagem…"); const up = await S.assets.upload(arq);
+      const antiga = fc.dados[campo]; fc.dados[campo] = up.id; mudouCarrossel(true);
+      if (antiga) { try { await S.assets.delete(antiga); } catch (e) { console.warn(e); } }
+    } catch (e) { console.error(e); toast(erroMsg(e)); }
+  }
+  // campo de texto ligado a um caminho dentro de fc.dados
+  function campoTexto(rotulo, obter, gravar, extra = {}) {
+    const el = h(extra.linhas ? "textarea" : "input", { type: extra.linhas ? null : "text", rows: extra.linhas || null, maxlength: String(extra.max || 200), placeholder: extra.ph || null, disabled: !S.canWrite,
+      "aria-label": rotulo ? null : extra.ph || null,
+      oninput: (ev) => { gravar(ev.target.value); mudouCarrossel(false); if (extra.depois) extra.depois(ev.target.value); } });
+    el.value = obter() || "";
+    return rotulo ? h("label", { class: "field" }, h("span", null, rotulo), el) : el;
+  }
+  function editorVaga(v, i, total) {
+    const resumo = h("span", { class: "fc-resumo" }, [v.titulo || "Vaga sem título", v.bolsa ? " · " + bolsaCurta(v.bolsa) : "", v.codigo ? " · " + v.codigo : ""].join(""));
+    const atualizaResumo = () => { resumo.textContent = [v.titulo || "Vaga sem título", v.bolsa ? " · " + bolsaCurta(v.bolsa) : "", v.codigo ? " · " + v.codigo : ""].join(""); };
+    const mover = (d) => { const l = fc.dados.vagas; const [x] = l.splice(i, 1); l.splice(i + d, 0, x); mudouCarrossel(true); };
+    const det = h("details", { class: "fc-vaga", open: fc.abertas.has(i) ? true : null, ontoggle: (ev) => { if (ev.target.open) fc.abertas.add(i); else fc.abertas.delete(i); } },
+      h("summary", null, h("b", null, `Vaga ${i + 1}`), resumo),
+      h("div", { class: "fc-grade" },
+        campoTexto("Título (área)", () => v.titulo, (x) => { v.titulo = x; }, { max: 40, ph: "Ex.: Administração", depois: atualizaResumo }),
+        campoTexto("Bolsa", () => v.bolsa, (x) => { v.bolsa = x; }, { max: 40, ph: "Ex.: R$ 1.200,00", depois: atualizaResumo }),
+        campoTexto("Código da vaga", () => v.codigo, (x) => { v.codigo = x; }, { max: 20, ph: "Ex.: 388061", depois: atualizaResumo })),
+      h("span", { class: "hint", style: "margin:0" }, "Linhas do card (rótulo e texto). Deixe o texto vazio para mostrar só o rótulo, como “Benefícios:”."),
+      h("div", { class: "fc-campos" }, (v.campos || []).map((c, k) => h("div", { class: "fc-campo" },
+        campoTexto(null, () => c.rotulo, (x) => { c.rotulo = x; }, { max: 30, ph: "Rótulo" }),
+        campoTexto(null, () => c.texto, (x) => { c.texto = x; }, { max: 300, ph: "Texto", linhas: 2 }),
+        S.canWrite ? h("button", { class: "btn ghost", type: "button", title: "Tirar esta linha", "aria-label": "Tirar esta linha", onclick: () => { v.campos.splice(k, 1); mudouCarrossel(true); } }, icone("fechar")) : null))),
+      S.canWrite ? h("div", { class: "row", style: "gap:6px;flex-wrap:wrap" },
+        h("button", { class: "btn ghost", type: "button", onclick: () => { (v.campos ||= []).push({ rotulo: "", texto: "" }); mudouCarrossel(true); } }, icone("mais"), "Linha"),
+        i > 0 ? h("button", { class: "btn ghost", type: "button", onclick: () => mover(-1) }, "Subir") : null,
+        i < total - 1 ? h("button", { class: "btn ghost", type: "button", onclick: () => mover(1) }, "Descer") : null,
+        h("button", { class: "btn ghost danger", type: "button", onclick: () => { fc.dados.vagas.splice(i, 1); fc.abertas.clear(); mudouCarrossel(true); } }, "Tirar vaga")) : null,
+      v.link && /^https:\/\/(www\.)?nube\.com\.br\//.test(v.link) ? h("a", { class: "link-acao", href: v.link, target: "_blank", rel: "noopener noreferrer" }, "Ver a vaga no site da Nube ↗") : null);
+    return det;
+  }
+  function renderCarrossel(p) {
+    const box = $("#f-carrossel"); const corpo = $("#fc-corpo");
+    const salvo = valorAtual(p, "carrossel") || null;
+    const fmt = formatoDe(valorAtual(p, "formato"));
+    box.hidden = !salvo && !(fmt && fmt.id === "carrossel");
+    if (fc.postId !== p.id) { fc.postId = p.id; fc.enviados.clear(); fc.abertas.clear(); adotar(salvo); }
+    else if (!fc.enviados.has(JSON.stringify(salvo)) && JSON.stringify(salvo) !== JSON.stringify(fc.dados)) adotar(salvo); // mudou por outra pessoa ou pelo Claude
+    if (box.hidden) { poe(corpo); corpo.dataset.assin = ""; return; }
+    const peds = S.pedidos.filter(pedidoDoCarrossel(p.id)).map((x) => [x.id, x.status, x.progresso, x.erro, x.sessao]);
+    const assin = JSON.stringify([p.id, fc.rev, peds, S.canWrite, !!S.assets, !!S.downloads, S.isOwner, S.pn.podeBuscar, gatilhoFila(), rotuloRodada(), !!fc.gerando, p.clienteId]);
+    if (corpo.dataset.assin === assin) return;
+    corpo.dataset.assin = assin;
+    const cab = h("div", { class: "cab-sec" }, h("span", { class: "eyebrow" }, "Carrossel no modelo"), fc.dados ? h("span", { class: "chip" }, (MODELOS_CARROSSEL[fc.dados.modelo] || {}).nome || "Modelo") : null);
+    const d = fc.dados;
+    if (!d || !MODELOS_CARROSSEL[d.modelo]) {
+      const lista = Object.entries(MODELOS_CARROSSEL).sort(([, a], [, b]) => (b.clienteId === p.clienteId) - (a.clienteId === p.clienteId));
+      const sel = h("select", { "aria-label": "Modelo do carrossel", disabled: !S.canWrite }, lista.map(([id, m]) => h("option", { value: id }, m.nome + (m.clienteId && m.clienteId !== p.clienteId ? ` (${nomeCliente(m.clienteId)})` : ""))));
+      const desc = h("p", { class: "hint", style: "margin:0" }, (lista[0] || [, {}])[1].descricao || "");
+      sel.addEventListener("change", () => { desc.textContent = (MODELOS_CARROSSEL[sel.value] || {}).descricao || ""; });
+      poe(corpo, cab, h("p", { class: "hint", style: "margin:0" }, "Monte o carrossel num modelo pronto: vocês colam os links das vagas (ou preenchem), conferem o texto e a Central gera as imagens no tamanho do Instagram (1080×1350)."),
+        S.canWrite && S.db ? h("div", { class: "row", style: "gap:8px;flex-wrap:wrap;align-items:center" }, sel,
+          h("button", { class: "btn primary", type: "button", onclick: () => { adotar(MODELOS_CARROSSEL[sel.value].novo()); fc.enviados.clear(); mudouCarrossel(true); registrar("carrossel", `começou o carrossel “${String(p.titulo || "um post").slice(0, 80)}” no modelo ${MODELOS_CARROSSEL[sel.value].nome}`, { postId: p.id, clienteId: p.clienteId || null }); } }, icone("carrossel"), "Usar este modelo")) : null, desc);
+      return;
+    }
+    const m = MODELOS_CARROSSEL[d.modelo]; const programa = d.modelo === "nube-programa";
+    // 1) links da Nube → pedido na fila do Claude
+    const ped = pedidoAtivo(pedidoDoCarrossel(p.id)); const ult = ultimoPedido(pedidoDoCarrossel(p.id));
+    const linksEl = h("textarea", { rows: programa ? "1" : "3", maxlength: "3000", disabled: !S.canWrite, placeholder: programa ? "https://www.nube.com.br/detalhes-vaga/…" : "Um link por linha: https://www.nube.com.br/detalhes-vaga/…",
+      oninput: (ev) => { d.links = ev.target.value.split(/\s+/).map((x) => x.trim()).filter(Boolean).slice(0, 15); mudouCarrossel(false); } });
+    linksEl.value = (d.links || []).join("\n");
+    const pedirDados = (btn) => {
+      const links = (d.links || []).filter((x) => /nube\.com\.br\/|^\d{4,9}$/.test(x));
+      if (!links.length) { toast("Cole pelo menos um link de vaga do site da Nube (ou o código da vaga)."); linksEl.focus(); return; }
+      descarregar("posts/" + p.id).then(() => criarPedido("carrossel", { postId: p.id, clienteId: p.clienteId || null, titulo: p.titulo || "Carrossel" }, { dados: { modelo: d.modelo, links } }, btn));
+    };
+    let filaEl = null;
+    if (ped) filaEl = h("div", { class: "fila-aviso", role: "status" }, icone(ped.status === "em_andamento" && !travado(ped) ? "carrossel" : "relogio"),
+      h("span", null, textoEspera(ped), h("small", { class: "pd-recado" }, "O Claude lê as vagas no site da Nube, resume cada uma para caber no card e preenche os campos aqui embaixo.")),
+      S.isOwner && linkSessao(ped) ? h("a", { class: "link-acao", href: linkSessao(ped), target: "_blank", rel: "noopener noreferrer" }, "Ver o Claude trabalhando ↗") : null,
+      S.isOwner && S.pn.podeBuscar && gatilhoFila() && (ped.status === "aguardando" || travado(ped)) ? h("button", { class: "link-acao", type: "button", onclick: (ev) => processarFila(ev.currentTarget) }, "Processar agora") : null,
+      ped.status === "aguardando" && S.canWrite && (ped.por === S.myId || S.isOwner) ? h("button", { class: "link-acao", type: "button", onclick: (ev) => cancelarPedido(ped, ev.currentTarget) }, "Cancelar") : null);
+    else if (ult && ult.status === "erro") filaEl = h("div", { class: "fila-aviso erro", role: "status" }, icone("alerta"), h("span", null, "O Claude não conseguiu puxar as vagas: " + String(ult.erro || "motivo não informado").slice(0, 240)));
+    else if (ult && ult.status === "feito" && ult.concluidoEm && Date.now() - new Date(ult.concluidoEm).getTime() < 6 * 3600e3) filaEl = h("div", { class: "fila-aviso", role: "status" }, icone("check"), h("span", null, (ult.resultado || "Vagas preenchidas.") + " Confira o texto antes de gerar as imagens."));
+    const blocoLinks = h("div", { class: "stack", style: "gap:8px" },
+      h("label", { class: "field" }, h("span", null, programa ? "Link da vaga no site da Nube" : "Links das vagas no site da Nube"), linksEl),
+      S.canWrite && S.db && !ped ? h("button", { class: "btn", type: "button", style: "justify-self:start", onclick: (ev) => pedirDados(ev.currentTarget) }, programa ? "Puxar os dados da vaga" : "Puxar os dados das vagas") : null);
+    // 2) campos do modelo
+    let campos;
+    if (!programa) {
+      const L = (d.capa ||= { linhas: [] }).linhas;
+      campos = [
+        h("details", { class: "fc-vaga" }, h("summary", null, h("b", null, "Capa"), h("span", { class: "fc-resumo" }, L.filter(Boolean).join(" "))),
+          h("div", { class: "fc-grade" }, [0, 1, 2, 3].map((k) => campoTexto(["Linha 1", "Linha 2", "Linha 3", "Linha 4 (verde)"][k], () => L[k], (x) => { L[k] = x; }, { max: 30 })))),
+        ...(d.vagas || []).map((v, i) => editorVaga(v, i, d.vagas.length)),
+        S.canWrite ? h("button", { class: "btn ghost", type: "button", style: "justify-self:start", onclick: () => { (d.vagas ||= []).push(novaVaga()); fc.abertas.add(d.vagas.length - 1); mudouCarrossel(true); } }, icone("mais"), "Adicionar vaga à mão") : null,
+        h("details", { class: "fc-vaga" }, h("summary", null, h("b", null, "Fechamento"), h("span", { class: "fc-resumo" }, "E aí, vamos iniciar a carreira na sua área?")),
+          campoTexto("Texto de baixo", () => (d.fechamento || {}).cta, (x) => { (d.fechamento ||= {}).cta = x; }, { max: 160, linhas: 2 })),
+      ];
+    } else {
+      const Lp = (d.linhas ||= {});
+      const upload = (campo, rotulo, dica) => {
+        const inp = h("input", { type: "file", accept: "image/png,image/jpeg,image/webp", hidden: true, onchange: (ev) => { const a = ev.target.files[0]; ev.target.value = ""; enviarImagemCarrossel(campo, a); } });
+        return h("div", { class: "field" }, h("span", null, rotulo),
+          h("div", { class: "row", style: "gap:8px;align-items:center;flex-wrap:wrap" }, d[campo] ? h("img", { class: "fc-mini", src: blob(d[campo]), alt: "" }) : null,
+            S.assets && S.canWrite ? [inp, h("button", { class: "btn ghost", type: "button", onclick: () => inp.click() }, d[campo] ? "Trocar" : "Enviar")] : h("span", { class: "hint" }, "Só quem pode enviar arquivos na Central.")),
+          h("span", { class: "hint", style: "margin:0" }, dica));
+      };
+      campos = [
+        h("div", { class: "fc-grade" },
+          campoTexto("Empresa", () => d.empresa, (x) => { d.empresa = x; }, { max: 40, ph: "Ex.: Phoenix Contact" }),
+          campoTexto("Palavra para comentar", () => d.palavra, (x) => { d.palavra = x; }, { max: 30, ph: "Ex.: PHOENIX" }),
+          campoTexto("Inscrições", () => d.inscricoes, (x) => { d.inscricoes = x; }, { max: 60, ph: "Ex.: 23/11/2026 a 08/01/2027" })),
+        h("div", { class: "fc-grade" }, upload("foto", "Foto da capa", "Foto em pé (retrato), de preferência com a pessoa no centro."), upload("logo", "Logo da empresa", "PNG com fundo transparente. Vira branco na capa e preto no card.")),
+        h("div", { class: "fc-grade" },
+          campoTexto("Chamada", () => d.chamada, (x) => { d.chamada = x; }, { max: 30 }),
+          campoTexto("Área", () => d.area, (x) => { d.area = x; }, { max: 40, ph: "Ex.: Engenharias" }),
+          campoTexto("Faixa verde", () => d.subtitulo, (x) => { d.subtitulo = x; }, { max: 60 })),
+        campoTexto("Bolsa-auxílio", () => Lp.bolsa, (x) => { Lp.bolsa = x; }, { max: 80 }),
+        campoTexto("Jornada", () => Lp.jornada, (x) => { Lp.jornada = x; }, { max: 160, linhas: 2 }),
+        campoTexto("Localização", () => Lp.localizacao, (x) => { Lp.localizacao = x; }, { max: 120 }),
+        campoTexto("Cursos e requisitos", () => Lp.cursos, (x) => { Lp.cursos = x; }, { max: 400, linhas: 4 }),
+        campoTexto("Benefícios", () => Lp.beneficios, (x) => { Lp.beneficios = x; }, { max: 400, linhas: 3 }),
+      ];
+    }
+    // 3) prévia e imagens prontas
+    const imgs = d.imagens || [];
+    const gerarBtn = S.canWrite && S.assets ? h("button", { class: "btn primary", type: "button", disabled: !!fc.gerando || !slidesDe(d).length, onclick: (ev) => gerarImagens(ev.currentTarget) }, imgs.length ? "Gerar as imagens de novo" : "Gerar as imagens") : null;
+    const nomeArq = (i) => `${slug(p.titulo || "carrossel")}-${String(i + 1).padStart(2, "0")}.jpg`;
+    const prontas = imgs.length ? h("div", { class: "stack", style: "gap:8px" },
+      h("span", { class: "eyebrow" }, `Imagens prontas (${imgs.length})`),
+      h("p", { class: "hint", id: "fc-desatualizado", hidden: true, style: "margin:0;color:var(--danger)" }, "O texto mudou depois que as imagens foram geradas. Gere de novo antes de postar."),
+      h("div", { class: "fc-previa" }, imgs.map((x, i) => h("figure", { class: "fc-slide" }, h("img", { src: blob(x.id), alt: x.rot || "Slide " + (i + 1), loading: "lazy" }),
+        h("figcaption", null, x.rot || "Slide " + (i + 1), S.downloads ? h("button", { class: "link-acao", type: "button", onclick: (ev) => baixarImagem(x, nomeArq(i), ev.currentTarget) }, "Baixar") : null)))),
+      S.downloads ? h("button", { class: "btn", type: "button", style: "justify-self:start", onclick: async (ev) => { const b = ev.currentTarget; b.disabled = true; for (let i = 0; i < imgs.length; i++) { if (!(await baixarImagem(imgs[i], nomeArq(i)))) break; } b.disabled = false; } }, `Baixar as ${imgs.length} imagens`) : null,
+      h("p", { class: "hint", style: "margin:0" }, `Geradas ${quando(d.geradoEm)}. Fontes parecidas com as do modelo do Canva.`)) : null;
+    poe(corpo, cab, filaEl, blocoLinks, ...campos,
+      h("span", { class: "eyebrow" }, "Prévia"),
+      h("div", { class: "fc-previa", id: "fc-previa" }),
+      h("div", { class: "row", style: "gap:8px;align-items:center;flex-wrap:wrap" }, gerarBtn, fc.gerando ? h("span", { class: "hint", id: "fc-gerando", role: "status" }, `Gerando as imagens: ${fc.gerando.feito} de ${fc.gerando.total}…`) : null),
+      prontas,
+      S.canWrite ? h("button", { class: "link-acao", type: "button", style: "justify-self:start", onclick: (ev) => {
+        const b = ev.currentTarget; if (b.dataset.confirmar !== "1") { b.dataset.confirmar = "1"; b.textContent = "Confirmar: tira o modelo e as imagens"; setTimeout(() => { if (b.isConnected) { b.dataset.confirmar = ""; b.textContent = "Tirar o modelo"; } }, 4000); return; }
+        const ids = [...imgs.map((x) => x.id), d.foto, d.logo].filter(Boolean); adotar(null); mudouCarrossel(true);
+        if (S.assets) ids.forEach((id) => S.assets.delete(id).catch((e) => console.warn(e)));
+      } }, "Tirar o modelo") : null);
+    resolverPessoas(corpo); desenharPrevia();
   }
 
   // ---------- etapas do vídeo (edição com o Claude, dentro da ficha do post) ----------
@@ -2295,7 +2754,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     opcoesPessoas($("#f-resp"), () => { const q = S.ficha && postPorId(S.ficha.id); return q ? valorAtual(q, "responsavel") : null; }, [["", "Sem responsável"]]);
     $("#f-resp-eu").hidden = ro || !S.myId || v("responsavel") === S.myId;
     $("#f-resp-outro").hidden = ro || !S.user;
-    renderTagsFicha(p); renderVideo(p); renderAnexos(p); renderRefsFicha(p); renderAprovacao(p); renderDesempenhoPost(p);
+    renderTagsFicha(p); renderVideo(p); renderCarrossel(p); renderAnexos(p); renderRefsFicha(p); renderAprovacao(p); renderDesempenhoPost(p);
     $("#f-prazo-sug").hidden = ro || !dataOk || !!deIso(v("prazo"));
     const ag = p.agendamento || AGENDAMENTO_VAZIO;
     $("#f-ag-status").textContent = ROTULO_AGENDAMENTO[ag.status] || ROTULO_AGENDAMENTO.nao_agendado;
@@ -2590,6 +3049,9 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       const snap = await S.db.collection(`${path}/comentarios`).get();
       for (const d of snap.docs) await S.db.doc(`${path}/comentarios/${d.id}`).delete();
       if (S.assets) for (const a of p.anexos || []) { try { await S.assets.delete(a.id); } catch (e) { console.warn(e); } }
+      const car = p.carrossel || {};
+      if (S.assets) for (const id of [...(car.imagens || []).map((x) => x.id), car.foto, car.logo].filter(Boolean)) { try { await S.assets.delete(id); } catch (e) { console.warn(e); } }
+      for (const pd of S.pedidos.filter((x) => x.postId === p.id && x.tipo === "carrossel" && PED_ATIVOS.includes(x.status))) { try { await emFila("pedidos/" + pd.id, () => S.db.doc("pedidos/" + pd.id).update({ status: "cancelado", concluidoEm: agora(), dados: null })); } catch (e) { console.warn(e); } }
       const pr = p.projetoId ? S.projetos.find((x) => x.id === p.projetoId) : null;
       if (pr) { // post e edição de vídeo são uma coisa só: saem juntos
         const ns = await S.db.collection(`projetos/${pr.id}/notas`).get();
