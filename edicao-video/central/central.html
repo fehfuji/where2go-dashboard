@@ -472,6 +472,16 @@ table.geral { width: 100%; border-collapse: collapse; font-size: 13.5px; min-wid
 .camp-nums > div { display: grid; gap: 1px; min-width: 0; }
 .camp-nums span { font-size: 11.5px; color: var(--muted); }
 .camp-nums b { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.gestao { border-top: 1px dashed var(--line); padding-top: 10px; }
+.gest-conj { display: grid; gap: 8px; padding: 10px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); min-width: 0; }
+.gest-campos { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: end; }
+.gest-linha { display: grid; gap: 3px; }
+.gest-linha input { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 7px 10px; font: inherit; font-size: 14px; width: 150px; max-width: 100%; }
+.gest-linha input[type="text"] { width: 110px; }
+.gest-ads { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.gest-ads li { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; font-size: 13.5px; }
+.gest-ad-nome { overflow-wrap: anywhere; min-width: 0; }
+.btn.confirmando, .link-acao.confirmando { color: var(--danger); border-color: var(--danger); font-weight: 600; }
 /* Carrossel no modelo */
 .fc-vaga { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--bg); min-width: 0; }
 .fc-vaga[open] { display: grid; gap: 10px; padding-bottom: 12px; }
@@ -1092,7 +1102,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     db: null, assets: null, user: null, downloads: null, myId: null, canWrite: true,
     estilos: [], refs: [], projetos: [], notas: [], posts: [], contas: [], analises: [], pedidos: [], trafego: [], campPedidos: [],
     loaded: { estilos: false, referencias: false, projetos: false, posts: false, contas: false, analises: false, config: false, clientes: false, relatorios: false, pedidos: false, trafego: false, campanhas_pedidas: false },
-    tr: { atualizando: false, analisando: null, form: null },
+    tr: { atualizando: false, analisando: null, form: null, vivo: new Map(), abertas: new Set(), versao: 0, gravando: false },
     // Painel: conta escolhida, ordem dos posts, histórico diário da conta escolhida, conector Pipeboard
     pn: { sel: null, ordem: "views", hist: [], histDe: undefined, unsubHist: null, mcp: null, podeAtualizar: false, atualizando: false, viraram: new Set(),
       sample: null, analisando: null, podeBuscar: false, podeDocs: false },
@@ -2136,7 +2146,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     } finally { S.tr.analisando = null; renderTrafego(); }
   }
   function kpiAds(rot, val, sub) { return h("div", { class: "kpi" }, h("span", null, rot), h("b", null, val), sub && sub.length ? h("small", null, sub) : null); }
-  function cartaoCampanha(c, moeda) {
+  function cartaoCampanha(c, moeda, t) {
     const [st, cor] = situacaoCampanha(c); const s = c.semana, m = c.mes;
     const res = (x) => (x && x.resultado && x.resultado.n ? `${numero(x.resultado.n)} ${x.resultado.n === 1 ? (TIPOS_RESULTADO[x.resultado.tipo] || {}).um : (TIPOS_RESULTADO[x.resultado.tipo] || {}).nome}` : "—");
     const custo = (x) => (x && x.resultado && ehNum(x.resultado.custo) ? dinheiro(x.resultado.custo, moeda) : "—");
@@ -2148,7 +2158,15 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       s && s.spend > 0 ? h("div", { class: "camp-nums" }, par("Investido 7 dias", dinheiro(s.spend, moeda)), par("Resultado 7 dias", res(s)), par("Custo por resultado", custo(s)),
         par("CTR", ehNum(s.ctr) ? pct(s.ctr) : "—"), par("Investido 30 dias", dinheiro(m ? m.spend : 0, moeda)), par("Resultado 30 dias", res(m)))
         : h("div", { class: "camp-nums" }, par("Investido 30 dias", dinheiro(m ? m.spend : 0, moeda)), par("Resultado 30 dias", res(m)), par("Custo por resultado", custo(m)),
-          h("div", null, h("span", null, "Últimos 7 dias"), h("b", { style: "font-weight:500;color:var(--muted)" }, "sem gasto"))));
+          h("div", null, h("span", null, "Últimos 7 dias"), h("b", { style: "font-weight:500;color:var(--muted)" }, "sem gasto"))),
+      ...(() => { // controles (só a dona, com o Pipeboard que mexe em campanhas)
+        const pode = t && S.isOwner && S.pn.podeGerenciar && S.db && c.id && c.status; if (!pode) return [];
+        const aberta = S.tr.abertas.has(c.id);
+        return [h("button", { class: aberta ? "btn ghost" : "btn", type: "button", style: "justify-self:start", "aria-expanded": String(aberta), onclick: () => {
+            if (aberta) S.tr.abertas.delete(c.id); else { S.tr.abertas.add(c.id); if (!S.tr.vivo.has(c.id)) { carregarGestao(t, c); return; } }
+            S.tr.versao++; renderTrafego(); } }, aberta ? "Fechar controles" : "Gerenciar campanha"),
+          aberta ? caixaGestao(t, c) : null];
+      })());
   }
   function cartaoTrafego(t) {
     const s = t.semana || {}, a = t.anterior || {}, m = t.mes || {}; const moeda = t.moeda || "BRL";
@@ -2190,7 +2208,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
       t.erro ? h("p", { class: "hint", style: "margin:0;color:var(--danger)" }, "A última atualização falhou: " + String(t.erro).slice(0, 160)) : null,
       t.semana ? kpis : h("p", { class: "hint" }, "Ainda sem números desta conta."),
       h("div", { class: "cab-sec" }, h("h3", null, "Campanhas"), h("span", { class: "hint" }, camps.length ? `${noAr} no ar · ${camps.length} com gasto nos últimos 30 dias ou ativas` : "")),
-      camps.length ? h("div", { class: "camps" }, camps.map((c) => cartaoCampanha(c, moeda))) : h("p", { class: "hint" }, "Nenhuma campanha ativa nem com gasto nos últimos 30 dias."),
+      camps.length ? h("div", { class: "camps" }, camps.map((c) => cartaoCampanha(c, moeda, t))) : h("p", { class: "hint" }, "Nenhuma campanha ativa nem com gasto nos últimos 30 dias."),
       blocoAnalise);
   }
 
@@ -2265,7 +2283,8 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     const btn = $("#tr-atualizar"); btn.hidden = !pode; btn.disabled = !!S.tr.atualizando;
     // contas
     const box = $("#tr-contas");
-    const assin = JSON.stringify([S.loaded.trafego, lista, S.pedidos.filter((x) => x.tipo === "trafego").map((x) => [x.id, x.status, x.progresso, x.erro]), S.tr.analisando, S.isOwner, S.canWrite, !!S.pn.sample, pode, rotuloRodada(), S.clientes.map((c) => [c.id, c.nome, c.ativo])]);
+    const assin = JSON.stringify([S.loaded.trafego, lista, S.pedidos.filter((x) => x.tipo === "trafego").map((x) => [x.id, x.status, x.progresso, x.erro]), S.tr.analisando, S.isOwner, S.canWrite, !!S.pn.sample, pode, rotuloRodada(), S.clientes.map((c) => [c.id, c.nome, c.ativo]),
+      S.tr.versao, [...S.tr.abertas], !!S.pn.podeGerenciar]);
     if (box.dataset.assin === assin) { /* nada mudou nas contas */ }
     else if ((box.dataset.assin = assin) && !S.loaded.trafego) poe(box, h("div", { class: "empty" }, h("strong", null, "Carregando…"), "Buscando o tráfego pago."));
     else if (!lista.length) poe(box, h("div", { class: "empty" }, h("strong", null, S.cli ? "Este cliente não tem conta de anúncio ligada" : "Nenhuma conta de anúncio ainda"),
@@ -2281,6 +2300,114 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
     const plist = $("#tr-ped-lista");
     const passin = JSON.stringify([peds, S.isOwner, S.canWrite, S.cli, S.myId]);
     if (plist.dataset.assin !== passin) { plist.dataset.assin = passin; poe(plist, peds.length ? h("div", { class: "camps" }, peds.slice(0, 30).map(cartaoPedidoCampanha)) : h("p", { class: "hint", style: "margin:0" }, "Nenhum pedido ainda.")); resolverPessoas(plist); }
+  }
+
+  // ---- Controlar as campanhas pela Central (só a dona, com o Pipeboard dela) ----
+  // Pausar/ativar campanha, conjunto e anúncio; mudar orçamento e data de término; duplicar campanha (pausada).
+  // Toda mudança pede confirmação (toque duas vezes) e depois a Central relê a conta para mostrar os números certos.
+  const FERRAMENTAS_GERIR = ["get_adsets", "get_ads", "update_campaign", "update_adset", "update_ad", "duplicate_campaign"];
+  const ST_META = { ACTIVE: ["no ar", "var(--bom)"], PAUSED: ["pausado", "var(--st-editando)"], CAMPAIGN_PAUSED: ["campanha pausada", "var(--st-editando)"], ADSET_PAUSED: ["conjunto pausado", "var(--st-editando)"],
+    IN_PROCESS: ["processando", "var(--st-storyboard)"], PENDING_REVIEW: ["em análise na Meta", "var(--st-storyboard)"], DISAPPROVED: ["reprovado", "var(--danger)"], WITH_ISSUES: ["com problema", "var(--danger)"],
+    PENDING_BILLING_INFO: ["falta pagamento", "var(--danger)"], ARCHIVED: ["arquivado", "var(--muted)"], DELETED: ["excluído", "var(--muted)"] };
+  const chipMeta = (st) => { const [n, cor] = ST_META[st] || [String(st || "—").toLowerCase(), "var(--muted)"]; return h("span", { class: "aprov", style: `--c3: ${cor}` }, n); };
+  const lerReais = (txt) => { const s = String(txt || "").replace(/\s|R\$/g, ""); const n = nnum(s.includes(",") ? s.replace(/\./g, "").replace(",", ".") : s); return ehNum(n) && n > 0 ? Math.round(n * 100) / 100 : null; };
+  const reaisCampo = (n) => (ehNum(n) ? nf1.format(n).replace(/\s/g, "") : "");
+  const fimMeta = (dia) => `${dia}T23:59:00-0300`;
+  function respostaEscrita(r) {
+    const erro = r && (r.error || (r.success === false && (r.message || r.details || "a Meta recusou")));
+    if (!r || erro) throw { code: "tool_error", message: typeof erro === "string" ? erro : (erro && (erro.message || erro.error_user_msg)) || JSON.stringify(erro || "sem resposta").slice(0, 160) };
+    return r;
+  }
+  async function carregarGestao(t, c) {
+    const v = S.tr.vivo.get(c.id) || {}; v.carregando = true; v.erro = null; S.tr.vivo.set(c.id, v); S.tr.versao++; renderTrafego();
+    try {
+      const [ra, rd] = await Promise.all([
+        chamarPB("get_adsets", { campaign_id: c.id, limit: 50, fields: "id,name,status,effective_status,daily_budget,lifetime_budget,start_time,end_time,optimization_goal,destination_type" }),
+        chamarPB("get_ads", { account_id: t.id, campaign_id: c.id, limit: 100, fields: "id,name,status,effective_status,adset_id" })]);
+      v.adsets = linhasPB(ra).map((a) => ({ id: String(a.id), nome: String(a.name || "Conjunto"), status: String(a.status || ""), efetivo: String(a.effective_status || a.status || ""),
+        dia: nnum(a.daily_budget) > 0 ? nnum(a.daily_budget) / 100 : null, total: nnum(a.lifetime_budget) > 0 ? nnum(a.lifetime_budget) / 100 : null,
+        inicio: isoMeta(a.start_time), fim: isoMeta(a.end_time), destino: a.destination_type || null }));
+      v.ads = linhasPB(rd).map((a) => ({ id: String(a.id), nome: String(a.name || "Anúncio"), status: String(a.status || ""), efetivo: String(a.effective_status || a.status || ""), adset: String(a.adset_id || "") }));
+    } catch (e) { console.warn("gestao", e); v.erro = e; }
+    finally { v.carregando = false; S.tr.versao++; renderTrafego(); }
+  }
+  async function releContaAds(t) { // números e situação certos depois de uma mudança
+    try { await atualizarContaAds({ id: t.id, name: t.nome, currency: t.moeda, account_status_label: t.status, amount_spent: t.gastoTotal }, { since: isoDia(somaDias(new Date(), -14)), until: isoDia(somaDias(new Date(), -8)) }); }
+    catch (e) { console.warn("relendo conta", e); }
+  }
+  async function escreverMeta(t, c, tool, input, texto, btn, unicaVez) {
+    if (btn) btn.disabled = true; S.tr.gravando = true;
+    try {
+      const r = unicaVez ? desembrulhar((await S.pn.mcp.callTool(SERVIDOR_IG, tool, input, { cache: false })).payload) : await chamarPB(tool, input);
+      respostaEscrita(r);
+      toast("Feito na Meta: " + texto); registrar("trafego", `${texto} (${t.nome})`, { clienteId: t.clienteId || null });
+      await releContaAds(t);
+      if (c) await carregarGestao(t, c);
+      return r;
+    } catch (e) {
+      console.warn("meta", tool, e);
+      toast(e && (PARA_TUDO.includes(e.code) || e.code === "tool_error" || e.code === "server_unavailable" || e.code === "rate_limited") ? msgMcp(e).replace("O Instagram recusou", "A Meta recusou") : erroMsg(e));
+      return null;
+    } finally { if (btn && btn.isConnected) btn.disabled = false; S.tr.gravando = false; }
+  }
+  // botão que pede um segundo toque para confirmar
+  function botaoConfirma(rotulo, confirmar, acao, classe = "btn ghost") {
+    const b = h("button", { class: classe, type: "button", onclick: () => {
+      if (b.dataset.c !== "1") { b.dataset.c = "1"; b.textContent = confirmar; b.classList.add("confirmando"); setTimeout(() => { if (b.isConnected && b.dataset.c === "1") { b.dataset.c = ""; b.textContent = rotulo; b.classList.remove("confirmando"); } }, 5000); return; }
+      b.dataset.c = ""; b.textContent = rotulo; b.classList.remove("confirmando"); acao(b);
+    } }, rotulo);
+    return b;
+  }
+  function caixaGestao(t, c) {
+    const v = S.tr.vivo.get(c.id) || {}; const nome = String(c.nome || "campanha").slice(0, 60);
+    const ativa = c.status === "ACTIVE";
+    const acoes = h("div", { class: "row", style: "gap:6px;flex-wrap:wrap" },
+      ativa ? botaoConfirma("Pausar campanha", "Confirmar: pausar", (b) => escreverMeta(t, c, "update_campaign", { campaign_id: c.id, status: "PAUSED" }, `pausou a campanha “${nome}”`, b))
+        : botaoConfirma("Ativar campanha", "Confirmar: ativar (começa a gastar)", (b) => escreverMeta(t, c, "update_campaign", { campaign_id: c.id, status: "ACTIVE" }, `ativou a campanha “${nome}”`, b), "btn"),
+      botaoConfirma("Duplicar (fica pausada)", "Confirmar: criar a cópia pausada", (b) => escreverMeta(t, null, "duplicate_campaign", { campaign_id: c.id, name_suffix: " - cópia", new_status: "PAUSED" }, `duplicou a campanha “${nome}” (cópia pausada)`, b, true)),
+      h("button", { class: "btn ghost", type: "button", disabled: !!v.carregando, onclick: () => carregarGestao(t, c) }, v.carregando ? "Carregando…" : "Recarregar"));
+    // orçamento da campanha (quando o orçamento é da campanha, não dos conjuntos)
+    let orcCamp = null;
+    if (ehNum(c.orcamentoDia) || ehNum(c.orcamentoTotal)) {
+      const diario = ehNum(c.orcamentoDia); const inp = h("input", { type: "text", inputmode: "decimal", value: reaisCampo(diario ? c.orcamentoDia : c.orcamentoTotal), "aria-label": "Orçamento da campanha em reais" });
+      orcCamp = h("div", { class: "gest-campos" }, h("label", { class: "gest-linha" }, h("span", { class: "hint" }, diario ? "Orçamento da campanha (R$ por dia)" : "Orçamento total da campanha (R$)"), inp),
+        botaoConfirma("Salvar orçamento", "Confirmar: salvar", (b) => { const n = lerReais(inp.value); if (!n) { toast("Escreva um valor em reais, ex.: 15 ou 12,50"); return; }
+          escreverMeta(t, c, "update_campaign", { campaign_id: c.id, [diario ? "daily_budget" : "lifetime_budget"]: Math.round(n * 100) }, `mudou o orçamento da campanha “${nome}” para ${dinheiro(n, t.moeda)}${diario ? "/dia" : ""}`, b); }, "btn"));
+    }
+    let corpo;
+    if (v.carregando && !v.adsets) corpo = h("p", { class: "hint", role: "status" }, "Buscando os conjuntos e os anúncios na Meta…");
+    else if (v.erro) corpo = h("p", { class: "hint", style: "color:var(--danger)" }, msgMcp(v.erro).replace("O Instagram recusou", "A Meta recusou"));
+    else if (!v.adsets) corpo = null;
+    else if (!v.adsets.length) corpo = h("p", { class: "hint" }, "Esta campanha não tem conjuntos de anúncios.");
+    else corpo = v.adsets.map((a) => {
+      const diario = ehNum(a.dia) || !ehNum(a.total); const inpOrc = (ehNum(a.dia) || ehNum(a.total)) ? h("input", { type: "text", inputmode: "decimal", value: reaisCampo(ehNum(a.dia) ? a.dia : a.total), "aria-label": "Orçamento do conjunto em reais" }) : null;
+      const inpFim = h("input", { type: "date", value: a.fim ? isoDia(new Date(a.fim)) : "", "aria-label": "Termina em" });
+      const ads = (v.ads || []).filter((x) => x.adset === a.id);
+      const nomeA = a.nome.slice(0, 60);
+      return h("div", { class: "gest-conj" },
+        h("div", { class: "camp-cab" }, h("b", null, a.nome), chipMeta(a.efetivo)),
+        h("div", { class: "gest-campos" },
+          inpOrc ? h("label", { class: "gest-linha" }, h("span", { class: "hint" }, diario ? "R$ por dia" : "R$ no total"), inpOrc) : h("span", { class: "hint" }, "Orçamento na campanha"),
+          h("label", { class: "gest-linha" }, h("span", { class: "hint" }, "Termina em"), inpFim),
+          botaoConfirma("Salvar", "Confirmar: salvar", (b) => {
+            const campos = {}; const partes = [];
+            if (inpOrc) { const n = lerReais(inpOrc.value); const antes = ehNum(a.dia) ? a.dia : a.total;
+              if (!n) { toast("Escreva o orçamento em reais, ex.: 15 ou 12,50"); return; }
+              if (Math.abs(n - antes) >= 0.01) { campos[ehNum(a.dia) ? "daily_budget" : "lifetime_budget"] = Math.round(n * 100); partes.push(`orçamento ${dinheiro(n, t.moeda)}${ehNum(a.dia) ? "/dia" : ""}`); } }
+            const diaFim = inpFim.value; const antesFim = a.fim ? isoDia(new Date(a.fim)) : "";
+            if (diaFim && diaFim !== antesFim) { if (diaFim < isoDia(new Date())) { toast("A data de término não pode ser no passado."); return; } campos.end_time = fimMeta(diaFim); partes.push(`término em ${dataCurta(diaFim)}`); }
+            if (!partes.length) { toast("Nada mudou neste conjunto."); return; }
+            escreverMeta(t, c, "update_adset", { adset_id: a.id, ...campos }, `mudou o conjunto “${nomeA}” da campanha “${nome}”: ${partes.join(" e ")}`, b);
+          }, "btn"),
+          a.status === "ACTIVE" ? botaoConfirma("Pausar conjunto", "Confirmar: pausar", (b) => escreverMeta(t, c, "update_adset", { adset_id: a.id, status: "PAUSED" }, `pausou o conjunto “${nomeA}”`, b))
+            : botaoConfirma("Ativar conjunto", "Confirmar: ativar", (b) => escreverMeta(t, c, "update_adset", { adset_id: a.id, status: "ACTIVE" }, `ativou o conjunto “${nomeA}”`, b))),
+        ads.length ? h("ul", { class: "gest-ads" }, ads.map((ad) => h("li", null, h("span", { class: "gest-ad-nome" }, ad.nome), chipMeta(ad.efetivo),
+          ad.status === "ACTIVE" ? botaoConfirma("Pausar", "Confirmar", (b) => escreverMeta(t, c, "update_ad", { ad_id: ad.id, status: "PAUSED" }, `pausou o anúncio “${ad.nome.slice(0, 60)}”`, b), "link-acao")
+            : botaoConfirma("Ativar", "Confirmar", (b) => escreverMeta(t, c, "update_ad", { ad_id: ad.id, status: "ACTIVE" }, `ativou o anúncio “${ad.nome.slice(0, 60)}”`, b), "link-acao")))) : h("p", { class: "hint", style: "margin:0" }, "Nenhum anúncio neste conjunto."));
+    });
+    return h("div", { class: "gestao stack", style: "gap:10px" },
+      h("p", { class: "hint", style: "margin:0" }, "As mudanças vão direto para a Meta pelo seu Pipeboard. Toque duas vezes para confirmar."),
+      acoes, orcCamp, corpo);
   }
 
   // ---------- etapas do vídeo (edição com o Claude, dentro da ficha do post) ----------
@@ -4638,6 +4765,7 @@ dialog.ficha::backdrop { background: rgb(6 14 18 / 0.45); }
         const ig = sv(SERVIDOR_IG); const ccr = sv(SERVIDOR_CCR);
         S.pn.podeAtualizar = !!ig && (ig.tools || []).length > 0;
         S.pn.podeTrafego = !!ig && ["get_ad_accounts", "get_campaigns", "get_insights"].every((n) => (ig.tools || []).some((t) => t.name === n));
+        S.pn.podeGerenciar = S.pn.podeTrafego && FERRAMENTAS_GERIR.every((n) => (ig.tools || []).some((t) => t.name === n));
         S.pn.podeBuscar = !!ccr && (ccr.tools || []).some((t) => t.name === "fire_trigger");
         const docs = sv(SERVIDOR_DOCS); S.pn.podeDocs = !!docs && (docs.tools || []).some((t) => t.name === "batch");
       } catch (e) { console.warn("mcp", e); S.pn.podeAtualizar = false; S.pn.podeBuscar = false; S.pn.podeTrafego = false; }
